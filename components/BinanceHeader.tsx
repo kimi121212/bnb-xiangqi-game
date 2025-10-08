@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Wallet, Trophy, BookOpen, Home, Menu, X } from 'lucide-react';
 import { useWallet } from '../hooks/useWallet';
 import { colors, gradients, shadows, borderRadius, spacing, typography } from '../styles/theme';
+import { useLanguage } from '../contexts/LanguageContext';
 import LanguageToggle from './LanguageToggle';
 
 const HeaderContainer = styled.div`
@@ -232,6 +233,7 @@ const BinanceHeader: React.FC<BinanceHeaderProps> = ({
   onExitGame
 }) => {
   const { walletInfo, connectWallet, disconnectWallet } = useWallet();
+  const { t } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 
   const formatAddress = (address: string) => {
@@ -243,8 +245,8 @@ const BinanceHeader: React.FC<BinanceHeaderProps> = ({
   };
 
   const navItems = [
-    { id: 'landing', label: 'Home', icon: Home },
-    { id: 'guide', label: 'Guide', icon: BookOpen },
+    { id: 'landing', label: t('nav.home'), icon: Home },
+    { id: 'guide', label: t('nav.guide'), icon: BookOpen },
   ];
 
   return (
@@ -254,8 +256,8 @@ const BinanceHeader: React.FC<BinanceHeaderProps> = ({
           <BinanceLogo>
             <LogoIcon>♔</LogoIcon>
             <LogoText>
-              <LogoTitle>BNB Xiangqi</LogoTitle>
-              <LogoSubtitle>Powered by Binance Smart Chain</LogoSubtitle>
+            <LogoTitle>{t('game.title')}</LogoTitle>
+            <LogoSubtitle>Powered by Binance Smart Chain</LogoSubtitle>
             </LogoText>
           </BinanceLogo>
         </LogoSection>
@@ -289,7 +291,7 @@ const BinanceHeader: React.FC<BinanceHeaderProps> = ({
               whileTap={{ scale: 0.95 }}
             >
               <Wallet size={16} />
-              Connect Wallet
+              {t('wallet.connect')}
             </ConnectButton>
           )}
         </WalletSection>

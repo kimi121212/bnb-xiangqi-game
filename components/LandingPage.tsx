@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Play, Users, Lock, Trophy, Coins, BookOpen, Plus, Search, Eye } from 'lucide-react';
 import { useWallet } from '../hooks/useWallet';
 import { colors, gradients, shadows, borderRadius, spacing, typography } from '../styles/theme';
+import { useLanguage } from '../contexts/LanguageContext';
 import CustomStakeInput from './CustomStakeInput';
 
 const LandingContainer = styled.div`
@@ -410,6 +411,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
   userGames = []
 }) => {
   const { walletInfo } = useWallet();
+  const { t } = useLanguage();
   const [showPrivateForm, setShowPrivateForm] = useState(false);
   const [privateGameId, setPrivateGameId] = useState('');
   const [privatePassword, setPrivatePassword] = useState('');
@@ -509,7 +511,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
       )}
       
       <NavigationHeader>
-        <NavTitle>BNB Xiangqi</NavTitle>
+        <NavTitle>{t('game.title')}</NavTitle>
         <NavButtons>
           <NavButton
             variant="secondary"
@@ -518,7 +520,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
             whileTap={{ scale: 0.95 }}
           >
             <BookOpen size={16} />
-            Game Guide
+            {t('nav.guide')}
           </NavButton>
         </NavButtons>
       </NavigationHeader>
@@ -536,7 +538,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
               fontSize: typography.fontSize.lg,
               fontWeight: typography.fontWeight.semibold
             }}>
-              Quick Actions
+              {t('nav.quick_actions')}
             </h3>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
@@ -547,7 +549,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
                 whileTap={{ scale: 0.98 }}
               >
                 <Plus size={20} />
-                Create Public Game
+                {t('nav.create_public')}
               </ActionButton>
               
               <ActionButton
@@ -557,24 +559,24 @@ const LandingPage: React.FC<LandingPageProps> = ({
                 whileTap={{ scale: 0.98 }}
               >
                 <Lock size={20} />
-                {showPrivateForm ? 'Hide' : 'Create'} Private Game
+                {showPrivateForm ? t('nav.hide_private') : t('nav.create_private')}
               </ActionButton>
             </div>
 
             {showPrivateForm && (
               <PrivateGameForm>
-                <FormLabel>Game ID</FormLabel>
+                <FormLabel>{t('nav.game_id')}</FormLabel>
                 <FormInput
                   type="text"
-                  placeholder="Enter game ID"
+                  placeholder={t('nav.enter_game_id')}
                   value={privateGameId}
                   onChange={(e) => setPrivateGameId(e.target.value)}
                 />
                 
-                <FormLabel>Password</FormLabel>
+                <FormLabel>{t('nav.password')}</FormLabel>
                 <FormInput
                   type="password"
-                  placeholder="Enter password"
+                  placeholder={t('nav.enter_password')}
                   value={privatePassword}
                   onChange={(e) => setPrivatePassword(e.target.value)}
                 />

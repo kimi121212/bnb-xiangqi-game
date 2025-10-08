@@ -18,6 +18,16 @@ const translations = {
     'nav.games': 'Games',
     'nav.create': 'Create Game',
     'nav.join': 'Join Game',
+    'nav.guide': 'Game Guide',
+    'nav.quick_actions': 'Quick Actions',
+    'nav.create_public': 'Create Public Game',
+    'nav.create_private': 'Create Private Game',
+    'nav.hide_private': 'Hide Private Game',
+    'nav.join_private': 'Join Private Game',
+    'nav.game_id': 'Game ID',
+    'nav.password': 'Password',
+    'nav.enter_game_id': 'Enter game ID',
+    'nav.enter_password': 'Enter password',
     
     // Game
     'game.title': 'BNB Xiangqi Game',
@@ -99,6 +109,16 @@ const translations = {
     'nav.games': '游戏',
     'nav.create': '创建游戏',
     'nav.join': '加入游戏',
+    'nav.guide': '游戏指南',
+    'nav.quick_actions': '快速操作',
+    'nav.create_public': '创建公开游戏',
+    'nav.create_private': '创建私人游戏',
+    'nav.hide_private': '隐藏私人游戏',
+    'nav.join_private': '加入私人游戏',
+    'nav.game_id': '游戏ID',
+    'nav.password': '密码',
+    'nav.enter_game_id': '输入游戏ID',
+    'nav.enter_password': '输入密码',
     
     // Game
     'game.title': 'BNB 象棋游戏',
