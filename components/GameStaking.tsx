@@ -278,7 +278,13 @@ const GameStaking: React.FC<GameStakingProps> = ({
         <PrizeLabel>Winner Takes All</PrizeLabel>
       </PrizePool>
 
-      <GameWalletInfo gameId={gameId} />
+      <GameWalletInfo 
+        gameId={gameId} 
+        onCheckWallet={() => {
+          // This will trigger the wallet monitoring
+          console.log('Manual wallet check triggered');
+        }}
+      />
 
       <StakeInfo>
         <InfoCard>

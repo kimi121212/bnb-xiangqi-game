@@ -66,9 +66,10 @@ const BalanceLabel = styled.div`
 interface GameWalletInfoProps {
   gameId: string;
   onBalanceUpdate?: (balance: number) => void;
+  onCheckWallet?: () => void;
 }
 
-export const GameWalletInfo: React.FC<GameWalletInfoProps> = ({ gameId, onBalanceUpdate }) => {
+export const GameWalletInfo: React.FC<GameWalletInfoProps> = ({ gameId, onBalanceUpdate, onCheckWallet }) => {
   const [walletInfo, setWalletInfo] = useState<{
     address: string;
     balance: number;
@@ -177,6 +178,24 @@ export const GameWalletInfo: React.FC<GameWalletInfoProps> = ({ gameId, onBalanc
         <BalanceAmount>{walletInfo.balance.toFixed(4)} BNB</BalanceAmount>
         <BalanceLabel>Pool Balance</BalanceLabel>
       </BalanceDisplay>
+
+      {onCheckWallet && (
+        <button 
+          onClick={onCheckWallet}
+          style={{
+            marginTop: spacing.sm,
+            padding: `${spacing.sm} ${spacing.md}`,
+            backgroundColor: colors.primary,
+            color: 'white',
+            border: 'none',
+            borderRadius: borderRadius.sm,
+            cursor: 'pointer',
+            fontSize: '0.9rem'
+          }}
+        >
+          Check Wallet Balance
+        </button>
+      )}
     </WalletContainer>
   );
 };

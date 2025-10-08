@@ -560,6 +560,57 @@ export const useGameManager = () => {
     }
   }, [walletInfo.provider]);
 
+  // Monitor game wallet for incoming BNB and update stake automatically
+  const monitorGameWallet = useCallback(async (gameId: string) => {
+    if (!walletInfo.provider) {
+      console.log('No provider available for wallet monitoring');
+      return;
+    }
+
+    try {
+      const game = simpleGameService.getGameById(gameId);
+      if (!game) {
+        console.log('Game not found for monitoring:', gameId);
+        return;
+      }
+
+      // Get current wallet balance
+      const currentBalance = await clientWalletManager.getWalletBalance(gameId, walletInfo.provider);
+      console.log(`Game ${gameId} wallet balance: ${currentBalance} BNB`);
+
+      // If wallet has BNB but game pool amount is 0, update the game state
+      if (currentBalance > 0 && game.poolAmount === 0) {
+        console.log(`Detected BNB in game wallet, updating game state...`);
+        
+        // Update game with the wallet balance
+        const updatedGame = simpleGameService.updatePoolAmount(gameId, currentBalance, walletInfo.address);
+        
+        if (updatedGame) {
+          console.log(`Game ${gameId} updated with ${currentBalance} BNB from wallet`);
+          // Trigger a refresh of the games list
+          setGames(prev => [...prev]);
+        }
+      }
+    } catch (error) {
+      console.error('Error monitoring game wallet:', error);
+    }
+  }, [walletInfo.provider, setGames]);
+
+  // Auto-monitor wallet when game is active
+  useEffect(() => {
+    if (currentGame && walletInfo.provider) {
+      // Monitor immediately
+      monitorGameWallet(currentGame.id);
+      
+      // Set up periodic monitoring every 10 seconds
+      const interval = setInterval(() => {
+        monitorGameWallet(currentGame.id);
+      }, 10000);
+
+      return () => clearInterval(interval);
+    }
+  }, [currentGame, walletInfo.provider, monitorGameWallet]);
+
 
   // Claim winnings
   const claimGameWinnings = useCallback(async (gameId: string) => {
