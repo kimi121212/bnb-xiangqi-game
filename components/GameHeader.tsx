@@ -3,6 +3,8 @@ import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Users, Eye, Trophy, Coins } from 'lucide-react';
 import { colors, gradients, shadows, borderRadius, spacing, typography } from '../styles/theme';
+import { useLanguage } from '../contexts/LanguageContext';
+import WalletAddress from './WalletAddress';
 
 const GameHeaderContainer = styled.div`
   display: flex;
@@ -168,6 +170,7 @@ const GameHeader: React.FC<GameHeaderProps> = ({
   onExit,
   onWatch
 }) => {
+  const { t } = useLanguage();
   return (
     <GameHeaderContainer>
       <LeftSection>
@@ -177,13 +180,13 @@ const GameHeader: React.FC<GameHeaderProps> = ({
           whileTap={{ scale: 0.95 }}
         >
           <ArrowLeft size={16} />
-          Exit Game
+          {t('game.exit')}
         </BackButton>
         
         <GameInfo>
           <GameTitle>{gameTitle}</GameTitle>
           <GameStatus status={gameStatus}>
-            {gameStatus === 'active' ? '🎮 GAME COMMENCED' : gameStatus.toUpperCase()}
+            {gameStatus === 'active' ? t('status.active') : t(`status.${gameStatus}`)}
           </GameStatus>
         </GameInfo>
       </LeftSection>

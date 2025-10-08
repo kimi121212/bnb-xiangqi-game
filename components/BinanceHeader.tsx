@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Wallet, Trophy, BookOpen, Home, Menu, X } from 'lucide-react';
 import { useWallet } from '../hooks/useWallet';
 import { colors, gradients, shadows, borderRadius, spacing, typography } from '../styles/theme';
+import LanguageToggle from './LanguageToggle';
 
 const HeaderContainer = styled.div`
   position: sticky;
@@ -275,6 +276,7 @@ const BinanceHeader: React.FC<BinanceHeaderProps> = ({
         </Navigation>
 
         <WalletSection>
+          <LanguageToggle />
           {walletInfo.isConnected ? (
             <WalletInfo>
               <WalletAddress>{formatAddress(walletInfo.address)}</WalletAddress>

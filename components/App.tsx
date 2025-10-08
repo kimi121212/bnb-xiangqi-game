@@ -3,6 +3,8 @@ import { createGlobalStyle } from 'styled-components';
 import styled from 'styled-components';
 import { Toaster } from 'react-hot-toast';
 import { colors, gradients, shadows, borderRadius, spacing, typography } from '../styles/theme';
+import { LanguageProvider } from '../contexts/LanguageContext';
+import LanguageToggle from './LanguageToggle';
 
 // Import game components
 import BinanceHeader from './BinanceHeader';
@@ -98,7 +100,7 @@ const ResponsiveContainer = styled.div`
   }
 `;
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
   const [currentView, setCurrentView] = useState<'lobby' | 'game' | 'spectator'>('lobby');
   const [selectedGame, setSelectedGame] = useState<any>(null);
   
@@ -380,6 +382,14 @@ const App: React.FC = () => {
         }}
       />
     </>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <LanguageProvider>
+      <AppContent />
+    </LanguageProvider>
   );
 };
 

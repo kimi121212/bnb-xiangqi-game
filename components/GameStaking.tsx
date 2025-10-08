@@ -4,9 +4,11 @@ import { motion } from 'framer-motion';
 import { Coins, Wallet, Trophy, AlertCircle, CheckCircle } from 'lucide-react';
 import { useWallet } from '../hooks/useWallet';
 import { colors, gradients, shadows, borderRadius, spacing, typography } from '../styles/theme';
+import { useLanguage } from '../contexts/LanguageContext';
 import StakingError from './StakingError';
 import GameWalletInfo from './GameWalletInfo';
 import GasPriceDisplay from './GasPriceDisplay';
+import WalletAddress from './WalletAddress';
 
 const StakingContainer = styled.div`
   display: flex;
@@ -236,6 +238,7 @@ const GameStaking: React.FC<GameStakingProps> = ({
   maxPlayers = 2
 }) => {
   const { walletInfo } = useWallet();
+  const { t } = useLanguage();
   const [confirmStake, setConfirmStake] = useState(false);
 
   const handleStake = async () => {
@@ -298,7 +301,7 @@ const GameStaking: React.FC<GameStakingProps> = ({
         <InfoCard>
           <InfoTitle>
             <Wallet size={16} />
-            Your Stake
+            {t('staking.your_stake')}
           </InfoTitle>
           <InfoValue>{formatBNB(stakeAmount)} BNB</InfoValue>
         </InfoCard>
@@ -306,7 +309,7 @@ const GameStaking: React.FC<GameStakingProps> = ({
         <InfoCard>
           <InfoTitle>
             <Trophy size={16} />
-            Total Prize
+            {t('staking.total')}
           </InfoTitle>
           <InfoValue>{formatBNB(stakeAmount * 2)} BNB</InfoValue>
         </InfoCard>
@@ -328,7 +331,7 @@ const GameStaking: React.FC<GameStakingProps> = ({
           fontWeight: typography.fontWeight.bold,
           color: stakeCount >= maxPlayers ? colors.accent.green : colors.text.primary
         }}>
-          {stakeCount}/{maxPlayers} Staked
+          {stakeCount}/{maxPlayers} {t('staking.stake_count')}
         </div>
         {stakeCount >= maxPlayers && (
           <div style={{ 
@@ -336,7 +339,7 @@ const GameStaking: React.FC<GameStakingProps> = ({
             color: colors.accent.green,
             fontWeight: typography.fontWeight.semibold
           }}>
-            🎮 Game Ready!
+            🎮 {t('status.ready')}
           </div>
         )}
       </div>
@@ -359,12 +362,12 @@ const GameStaking: React.FC<GameStakingProps> = ({
       {!walletInfo.isConnected ? (
         <StatusMessage type="warning">
           <AlertCircle size={16} />
-          Connect your wallet to stake and play
+          {t('staking.connect_wallet')}
         </StatusMessage>
       ) : hasInsufficientBalance ? (
         <StatusMessage type="error">
           <AlertCircle size={16} />
-          Insufficient BNB balance. You need {formatBNB(stakeAmount)} BNB
+          {t('staking.insufficient_balance')} {formatBNB(stakeAmount)} BNB
         </StatusMessage>
       ) : !isStaked ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
@@ -379,12 +382,12 @@ const GameStaking: React.FC<GameStakingProps> = ({
               {isStaking ? (
                 <>
                   <LoadingSpinner />
-                  Staking...
+                  {t('common.loading')}
                 </>
               ) : (
                 <>
                   <Coins size={16} />
-                  Stake {formatBNB(stakeAmount)} BNB
+                  {t('game.stake')} {formatBNB(stakeAmount)} BNB
                 </>
               )}
             </StakeButton>
