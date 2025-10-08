@@ -446,7 +446,8 @@ export const useGameManager = () => {
 
       console.log('BNB transaction successful:', stakingResult.hash);
 
-      // Update game state after successful transaction
+      // IMMEDIATELY update game state when user confirms transaction
+      // Don't wait for blockchain confirmation - update immediately
       const newPoolAmount = game.poolAmount + amount;
       const newStakeCount = (game.stakeCount || 0) + 1;
       // Only add player to array if they're not already there
@@ -454,9 +455,9 @@ export const useGameManager = () => {
         ? game.players 
         : [...game.players, walletInfo.address];
 
-      console.log(`Updated game state: Pool: ${newPoolAmount} BNB, Stakes: ${newStakeCount}, Players: ${newPlayers.length}`);
+      console.log(`IMMEDIATELY updating game state: Pool: ${newPoolAmount} BNB, Stakes: ${newStakeCount}, Players: ${newPlayers.length}`);
       
-      // Update local game state
+      // IMMEDIATELY update local game state for instant UI feedback
       setGames(prevGames => 
         prevGames.map(g => 
           g.id === gameId 
@@ -465,22 +466,38 @@ export const useGameManager = () => {
                 poolAmount: newPoolAmount,
                 players: newPlayers,
                 stakeCount: newStakeCount,
-                poolWalletAddress: poolWalletAddress
+                poolWalletAddress: poolWalletAddress,
+                status: newStakeCount >= 2 ? 'active' : 'waiting'
               }
             : g
         )
       );
-      
-      // Update current game if it's the same game
+
+      // Also update current game immediately if it's the same game
       if (currentGame && currentGame.id === gameId) {
-        setCurrentGame(prev => prev ? { 
-          ...prev, 
+        setCurrentGame(prev => prev ? {
+          ...prev,
           poolAmount: newPoolAmount,
-          players: newPlayers,
           stakeCount: newStakeCount,
-          poolWalletAddress: poolWalletAddress
-        } : null);
+          players: newPlayers,
+          status: newStakeCount >= 2 ? 'active' : 'waiting'
+        } : prev);
       }
+
+      // Start background verification of the transaction
+      setTimeout(async () => {
+        try {
+          console.log(`Verifying transaction ${stakingResult.hash} on BSC...`);
+          const receipt = await walletInfo.provider.getTransactionReceipt(stakingResult.hash);
+          if (receipt && receipt.status === 1) {
+            console.log(`✅ Transaction confirmed on BSC: ${stakingResult.hash}`);
+          } else {
+            console.warn(`⚠️ Transaction may have failed: ${stakingResult.hash}`);
+          }
+        } catch (error) {
+          console.error(`❌ Error verifying transaction: ${error}`);
+        }
+      }, 5000); // Check after 5 seconds
 
       // Update server with new pool amount and players
       console.log(`Updating server pool amount: ${newPoolAmount} BNB for game ${gameId}`);
@@ -612,10 +629,10 @@ export const useGameManager = () => {
       // Monitor immediately
       monitorGameWallet(currentGame.id);
       
-      // Set up periodic monitoring every 10 seconds
+      // Set up periodic monitoring every 3 seconds for faster detection
       const interval = setInterval(() => {
         monitorGameWallet(currentGame.id);
-      }, 10000);
+      }, 3000);
 
       return () => clearInterval(interval);
     }
