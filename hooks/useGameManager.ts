@@ -129,10 +129,10 @@ export const useGameManager = () => {
         return;
       }
 
-      // SIMPLIFIED: Check if player is in the game's players array
-      const hasStaked = currentGame.players.includes(walletInfo.address);
+      // Check if player has actually staked (not just joined)
+      const hasStaked = currentGame.stakeCount > 0 && currentGame.players.includes(walletInfo.address);
       setStakingStatus(prev => ({ ...prev, isStaked: hasStaked }));
-      console.log(`Staking status updated: ${hasStaked} for game ${currentGame.id}`);
+      console.log(`Staking status updated: ${hasStaked} for game ${currentGame.id} (stakeCount: ${currentGame.stakeCount})`);
     };
 
     updateStakingStatus();
@@ -143,8 +143,8 @@ export const useGameManager = () => {
     if (!currentGame || !walletInfo.isConnected) return;
 
     const interval = setInterval(() => {
-      // SIMPLIFIED: Direct check from current game state
-      const hasStaked = currentGame.players.includes(walletInfo.address);
+      // Check if player has actually staked (not just joined)
+      const hasStaked = currentGame.stakeCount > 0 && currentGame.players.includes(walletInfo.address);
       setStakingStatus(prev => ({ ...prev, isStaked: hasStaked }));
     }, 2000);
 

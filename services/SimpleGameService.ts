@@ -66,7 +66,7 @@ class SimpleGameService {
       isPrivate: gameData.isPrivate || false,
       password: gameData.password || '',
       host: gameData.host || '',
-      players: gameData.host ? [gameData.host] : [],
+      players: [], // Don't automatically add host to players - they need to stake first
       status: 'waiting',
       createdAt: Date.now(),
       spectators: 0,
@@ -74,6 +74,12 @@ class SimpleGameService {
       stakeCount: 0,
       gameInstance: new XiangqiGame()
     };
+
+    // Ensure gameInstance is properly initialized
+    if (!newGame.gameInstance || typeof newGame.gameInstance.getGameState !== 'function') {
+      console.log('Reinitializing gameInstance for game:', gameId);
+      newGame.gameInstance = new XiangqiGame();
+    }
 
     this.games.set(gameId, newGame);
     this.notifyListeners();
