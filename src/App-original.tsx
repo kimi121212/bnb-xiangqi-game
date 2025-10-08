@@ -6,7 +6,6 @@ import { XiangqiGame } from './utils/xiangqiLogic';
 import { Position, PieceColor } from './types/game';
 import GameBoard from './components/GameBoard';
 import WalletConnect from './components/WalletConnect';
-import GameStaking from './components/GameStaking';
 import StakingStatus from './components/StakingStatus';
 import LandingPage from './components/LandingPage';
 import GameGuide from './components/GameGuide';
