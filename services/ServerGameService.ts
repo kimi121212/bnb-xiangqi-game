@@ -55,7 +55,7 @@ class ServerGameService {
     }
   }
 
-  // Create a new game
+  // Create a new game room
   async createGame(gameData: Partial<GameData>): Promise<GameData | null> {
     try {
       const response = await fetch('/api/games', {
@@ -63,30 +63,40 @@ class ServerGameService {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(gameData),
+        body: JSON.stringify({
+          action: 'create',
+          ...gameData
+        }),
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
       const newGame = await response.json();
+      console.log(`🎮 Created game room on server: ${newGame.id}`);
+      this.notifyListeners([newGame]); // Notify listeners after creating a game
       return newGame;
     } catch (error) {
-      console.error('Error creating game:', error);
+      console.error('Error creating game room:', error);
       return null;
     }
   }
 
-  // Join a game
+  // Join a game room
   async joinGame(gameId: string, playerAddress: string): Promise<GameData | null> {
     try {
-      const response = await fetch(`/api/games/${gameId}/join`, {
+      const response = await fetch('/api/games', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ playerAddress }),
+        body: JSON.stringify({
+          action: 'join',
+          gameId,
+          playerAddress
+        }),
       });
 
       if (!response.ok) {
@@ -95,55 +105,71 @@ class ServerGameService {
       }
 
       const updatedGame = await response.json();
+      console.log(`👤 Player ${playerAddress} joined game room ${gameId}`);
+      this.notifyListeners([updatedGame]); // Notify listeners after joining
       return updatedGame;
     } catch (error) {
-      console.error('Error joining game:', error);
+      console.error('Error joining game room:', error);
       throw error; // Re-throw to let the caller handle it
     }
   }
 
-  // Update game status
+  // Update game room status
   async updateGameStatus(gameId: string, status: string): Promise<GameData | null> {
     try {
-      const response = await fetch(`/api/games/${gameId}/status`, {
-        method: 'PUT',
+      const response = await fetch('/api/games', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({
+          action: 'updateStatus',
+          gameId,
+          status
+        }),
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
       const updatedGame = await response.json();
+      console.log(`🔄 Game room ${gameId} status updated to ${status}`);
+      this.notifyListeners([updatedGame]); // Notify listeners after status update
       return updatedGame;
     } catch (error) {
-      console.error('Error updating game status:', error);
+      console.error('Error updating game room status:', error);
       return null;
     }
   }
 
-  // Update pool amount
+  // Update game room pool amount
   async updatePoolAmount(gameId: string, amount: number): Promise<GameData | null> {
     try {
-      const response = await fetch(`/api/games/${gameId}/pool`, {
-        method: 'PUT',
+      const response = await fetch('/api/games', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ amount }),
+        body: JSON.stringify({
+          action: 'updatePool',
+          gameId,
+          amount
+        }),
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
       const updatedGame = await response.json();
+      console.log(`💰 Game room ${gameId} pool updated to ${amount} BNB`);
+      this.notifyListeners([updatedGame]); // Notify listeners after pool update
       return updatedGame;
     } catch (error) {
-      console.error('Error updating pool amount:', error);
+      console.error('Error updating game room pool:', error);
       return null;
     }
   }
@@ -161,6 +187,55 @@ class ServerGameService {
     return () => {
       this.removeGameListener(callback);
     };
+  }
+
+  // Get a specific game room
+  async getGameById(gameId: string): Promise<GameData | null> {
+    try {
+      const response = await fetch(`/api/games?gameId=${gameId}`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          console.log(`❌ Game room not found: ${gameId}`);
+          return null;
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const game = await response.json();
+      return game;
+    } catch (error) {
+      console.error('Error fetching game room:', error);
+      return null;
+    }
+  }
+
+  // Add move to game room
+  async addMove(gameId: string, move: any): Promise<GameData | null> {
+    try {
+      const response = await fetch('/api/games', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'addMove',
+          gameId,
+          move
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+
+      const updatedGame = await response.json();
+      console.log(`♟️ Move added to game room ${gameId}`);
+      this.notifyListeners([updatedGame]); // Notify listeners after move
+      return updatedGame;
+    } catch (error) {
+      console.error('Error adding move to game room:', error);
+      return null;
+    }
   }
 
   // Get all games (alias for getGames)

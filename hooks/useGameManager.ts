@@ -445,16 +445,15 @@ export const useGameManager = () => {
         console.warn('Failed to refresh games list:', refreshError);
       }
       
-      // Get current game state from server service with fallback
+      // Get current game state from server service
       let game = null;
       try {
-        const allGames = await serverGameService.getGames();
-        game = allGames.find(g => g.id === gameId);
-        console.log('Game lookup from server:', game ? 'Found' : 'Not found');
+        // Use the new getGameById method for direct game room lookup
+        game = await serverGameService.getGameById(gameId);
+        console.log('Game room lookup from server:', game ? 'Found' : 'Not found');
         
-        // If not found on server, try local games as fallback
         if (!game) {
-          console.log('Game not found on server, checking local games...');
+          console.log('Game room not found on server, checking local games as fallback...');
           game = games.find(g => g.id === gameId);
           console.log('Game lookup from local:', game ? 'Found' : 'Not found');
           
@@ -464,7 +463,7 @@ export const useGameManager = () => {
           }
         }
       } catch (serverError) {
-        console.warn('Server game lookup failed, trying local games:', serverError);
+        console.warn('Server game room lookup failed, trying local games:', serverError);
         // Fallback to local games
         game = games.find(g => g.id === gameId);
         console.log('Game lookup from local:', game ? 'Found' : 'Not found');
