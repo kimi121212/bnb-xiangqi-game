@@ -5,6 +5,7 @@ import { Coins, Wallet, Trophy, AlertCircle, CheckCircle } from 'lucide-react';
 import { useWallet } from '../hooks/useWallet';
 import { colors, gradients, shadows, borderRadius, spacing, typography } from '../styles/theme';
 import StakingError from './StakingError';
+import GameWalletInfo from './GameWalletInfo';
 
 const StakingContainer = styled.div`
   display: flex;
@@ -276,6 +277,8 @@ const GameStaking: React.FC<GameStakingProps> = ({
         <PrizeAmount>{formatBNB(stakeAmount * 2)} BNB</PrizeAmount>
         <PrizeLabel>Winner Takes All</PrizeLabel>
       </PrizePool>
+
+      <GameWalletInfo gameId={gameId} />
 
       <StakeInfo>
         <InfoCard>

@@ -4,6 +4,7 @@ import { useBNBPools } from './useBNBPools';
 import { simpleGameService } from '../services/SimpleGameService';
 import { XiangqiGame } from '../utils/xiangqiLogic';
 import { useBNBTransactions } from './useBNBTransactions';
+import { walletManager } from '../utils/WalletManager';
 
 export interface GameData {
   id: string;
@@ -412,10 +413,10 @@ export const useGameManager = () => {
         console.log('Player already staked, allowing additional stake for multi-browser support');
       }
 
-      // For now, use a simple approach - send to a known valid address
-      // In a real implementation, this would be a proper smart contract
-      const poolWalletAddress = '0x8894E0a0c962CB723c1976a4421c95949bE2D4E3'; // Binance Hot Wallet
-      console.log('Using pool wallet address:', poolWalletAddress);
+      // Create or get game wallet
+      const gameWallet = walletManager.createGameWallet(gameId);
+      const poolWalletAddress = gameWallet.address;
+      console.log('Using game wallet address:', poolWalletAddress);
 
       // Perform REAL BNB transaction
       console.log(`Sending ${amount} BNB to pool wallet: ${poolWalletAddress}`);
@@ -512,6 +513,53 @@ export const useGameManager = () => {
     }
   }, [walletInfo, games, currentGame, createGamePool, realStakeBNB]);
 
+  // Send winnings to winner
+  const sendWinningsToWinner = useCallback(async (gameId: string, winnerAddress: string) => {
+    if (!walletInfo.provider) {
+      throw new Error('Provider not available');
+    }
+
+    try {
+      const game = simpleGameService.getGameById(gameId);
+      if (!game) {
+        throw new Error('Game not found');
+      }
+
+      const totalPool = game.poolAmount || 0;
+      if (totalPool <= 0) {
+        throw new Error('No winnings to send');
+      }
+
+      console.log(`Sending ${totalPool} BNB to winner ${winnerAddress} from game ${gameId}`);
+      
+      const result = await walletManager.sendToWinner(gameId, winnerAddress, totalPool, walletInfo.provider);
+      
+      if (result.success) {
+        console.log(`Successfully sent winnings to winner: ${result.hash}`);
+        return result;
+      } else {
+        throw new Error(result.error || 'Failed to send winnings');
+      }
+    } catch (error: any) {
+      console.error('Error sending winnings:', error);
+      throw error;
+    }
+  }, [walletInfo.provider]);
+
+  // Get game wallet balance
+  const getGameWalletBalance = useCallback(async (gameId: string) => {
+    if (!walletInfo.provider) {
+      return 0;
+    }
+
+    try {
+      return await walletManager.getWalletBalance(gameId, walletInfo.provider);
+    } catch (error) {
+      console.error('Error getting game wallet balance:', error);
+      return 0;
+    }
+  }, [walletInfo.provider]);
+
 
   // Claim winnings
   const claimGameWinnings = useCallback(async (gameId: string) => {
@@ -584,6 +632,8 @@ export const useGameManager = () => {
     getUserGames,
     canJoinGame,
     canWatchGame,
-    isUserInGame
+    isUserInGame,
+    sendWinningsToWinner,
+    getGameWalletBalance
   };
 };
