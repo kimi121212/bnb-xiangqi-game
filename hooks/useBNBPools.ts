@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ethers } from 'ethers';
 import { useWallet } from './useWallet';
-import { GamePoolWalletManager, GamePoolWallet } from '../contracts/GamePoolWallet';
+// import { GamePoolWalletManager, GamePoolWallet } from '../contracts/GamePoolWallet';
 
 export interface GamePoolData {
   gameId: string;
@@ -16,7 +16,7 @@ export interface GamePoolData {
 
 export const useBNBPools = () => {
   const { walletInfo, provider, signer } = useWallet();
-  const [poolManager, setPoolManager] = useState<GamePoolWalletManager | null>(null);
+  const [poolManager, setPoolManager] = useState<any | null>(null);
   const [gamePools, setGamePools] = useState<Map<string, GamePoolData>>(new Map());
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +24,8 @@ export const useBNBPools = () => {
   // Initialize pool manager when wallet connects
   useEffect(() => {
     if (provider && signer && walletInfo.isConnected) {
-      const manager = new GamePoolWalletManager(provider, signer);
+      // const manager = new GamePoolWalletManager(provider, signer);
+      const manager = null; // TODO: Implement contract integration
       setPoolManager(manager);
       console.log('BNB Pool Manager initialized');
     }

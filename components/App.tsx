@@ -192,7 +192,7 @@ const App: React.FC = () => {
       // Ensure the game has a game instance
       if (!game.gameInstance) {
         console.log('Adding game instance to created game');
-        game.gameInstance = new (await import('./utils/xiangqiLogic')).XiangqiGame();
+        game.gameInstance = new (await import('../utils/xiangqiLogic')).XiangqiGame();
       }
       
       setSelectedGame(game);
@@ -217,7 +217,7 @@ const App: React.FC = () => {
       // Ensure the game has a game instance
       if (!joinedGame.gameInstance) {
         console.log('Adding game instance to joined game');
-        joinedGame.gameInstance = new (await import('./utils/xiangqiLogic')).XiangqiGame();
+        joinedGame.gameInstance = new (await import('../utils/xiangqiLogic')).XiangqiGame();
       }
       
       setSelectedGame(joinedGame);
@@ -241,7 +241,7 @@ const App: React.FC = () => {
       // Ensure the game has a game instance
       if (!game.gameInstance) {
         console.log('Adding game instance to watched game');
-        game.gameInstance = new (await import('./utils/xiangqiLogic')).XiangqiGame();
+        game.gameInstance = new (await import('../utils/xiangqiLogic')).XiangqiGame();
       }
       
       setSelectedGame(game);
