@@ -1,11 +1,49 @@
 import { v4 as uuidv4 } from 'uuid';
+import fs from 'fs';
+import path from 'path';
 
-// In-memory game storage (for serverless environments)
-// In production, this should be replaced with a proper database like MongoDB, PostgreSQL, or Redis
-let games = [];
+// Persistent file-based database for Vercel
+const GAMES_FILE = path.join(process.cwd(), 'data', 'games.json');
+
+// Ensure data directory exists
+const ensureDataDir = () => {
+  const dataDir = path.dirname(GAMES_FILE);
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+  }
+};
+
+// Load games from persistent file
+const loadGames = () => {
+  try {
+    ensureDataDir();
+    if (fs.existsSync(GAMES_FILE)) {
+      const data = fs.readFileSync(GAMES_FILE, 'utf8');
+      const games = JSON.parse(data);
+      console.log(`📊 Loaded ${games.length} games from persistent storage`);
+      return games;
+    }
+  } catch (error) {
+    console.error('Error loading games:', error);
+  }
+  console.log('📊 No existing games file, starting fresh');
+  return [];
+};
+
+// Save games to persistent file
+const saveGames = (games) => {
+  try {
+    ensureDataDir();
+    fs.writeFileSync(GAMES_FILE, JSON.stringify(games, null, 2));
+    console.log(`💾 Saved ${games.length} games to persistent storage`);
+  } catch (error) {
+    console.error('Error saving games:', error);
+  }
+};
 
 // Game room management functions
 const createGameRoom = (gameData) => {
+  const games = loadGames();
   const newGame = {
     id: uuidv4(),
     ...gameData,
@@ -21,30 +59,39 @@ const createGameRoom = (gameData) => {
   };
   
   games.push(newGame);
+  saveGames(games);
   console.log(`🎮 Created game room: ${newGame.id} - ${newGame.title}`);
   console.log(`📊 Total active game rooms: ${games.length}`);
   return newGame;
 };
 
 const getGameRoom = (gameId) => {
+  const games = loadGames();
   const game = games.find(g => g.id === gameId);
   if (!game) {
     console.log(`❌ Game room not found: ${gameId}`);
     console.log(`📋 Available game rooms: ${games.map(g => g.id).join(', ')}`);
+  } else {
+    console.log(`✅ Game room found: ${gameId} - ${game.title}`);
   }
   return game;
 };
 
 const getAllGameRooms = () => {
+  const games = loadGames();
   console.log(`📊 Returning ${games.length} game rooms`);
   return games;
 };
 
 const joinGameRoom = (gameId, playerAddress) => {
-  const game = getGameRoom(gameId);
-  if (!game) {
+  const games = loadGames();
+  const gameIndex = games.findIndex(g => g.id === gameId);
+  
+  if (gameIndex === -1) {
     throw new Error('Game room not found');
   }
+  
+  const game = games[gameIndex];
   
   if (game.status !== 'waiting') {
     throw new Error('Game room is not accepting new players');
@@ -64,44 +111,56 @@ const joinGameRoom = (gameId, playerAddress) => {
     console.log(`🚀 Game room ${gameId} is now active with ${game.players.length} players`);
   }
   
+  saveGames(games);
   console.log(`👤 Player ${playerAddress} joined game room ${gameId}`);
   return game;
 };
 
 const updateGameRoomStatus = (gameId, status) => {
-  const game = getGameRoom(gameId);
-  if (!game) {
+  const games = loadGames();
+  const gameIndex = games.findIndex(g => g.id === gameId);
+  
+  if (gameIndex === -1) {
     throw new Error('Game room not found');
   }
   
+  const game = games[gameIndex];
   game.status = status;
   if (status === 'active') {
     game.gameState = 'in_progress';
   }
   
+  saveGames(games);
   console.log(`🔄 Game room ${gameId} status updated to ${status}`);
   return game;
 };
 
 const updateGameRoomPool = (gameId, amount) => {
-  const game = getGameRoom(gameId);
-  if (!game) {
+  const games = loadGames();
+  const gameIndex = games.findIndex(g => g.id === gameId);
+  
+  if (gameIndex === -1) {
     throw new Error('Game room not found');
   }
   
+  const game = games[gameIndex];
   game.poolAmount = amount;
   game.stakeCount += 1;
   
+  saveGames(games);
   console.log(`💰 Game room ${gameId} pool updated to ${amount} BNB`);
   return game;
 };
 
 const addMoveToGame = (gameId, move) => {
-  const game = getGameRoom(gameId);
-  if (!game) {
+  const games = loadGames();
+  const gameIndex = games.findIndex(g => g.id === gameId);
+  
+  if (gameIndex === -1) {
     throw new Error('Game room not found');
   }
   
+  const game = games[gameIndex];
   game.moves.push({
     ...move,
     timestamp: Date.now(),
@@ -111,6 +170,7 @@ const addMoveToGame = (gameId, move) => {
   // Switch current player
   game.currentPlayer = game.currentPlayer === 'red' ? 'black' : 'red';
   
+  saveGames(games);
   console.log(`♟️ Move added to game room ${gameId}: ${move.from} -> ${move.to}`);
   return game;
 };
@@ -126,11 +186,12 @@ const getGameRoomMoves = (gameId) => {
 
 // Clean up old games (older than 24 hours)
 const cleanupOldGames = () => {
+  const games = loadGames();
   const now = Date.now();
   const oneDay = 24 * 60 * 60 * 1000;
   
   const initialCount = games.length;
-  games = games.filter(game => {
+  const filteredGames = games.filter(game => {
     const isOld = (now - game.createdAt) > oneDay;
     if (isOld) {
       console.log(`🧹 Cleaning up old game room: ${game.id}`);
@@ -138,10 +199,13 @@ const cleanupOldGames = () => {
     return !isOld;
   });
   
-  const cleanedCount = initialCount - games.length;
+  const cleanedCount = initialCount - filteredGames.length;
   if (cleanedCount > 0) {
+    saveGames(filteredGames);
     console.log(`🧹 Cleaned up ${cleanedCount} old game rooms`);
   }
+  
+  return filteredGames;
 };
 
 export default function handler(req, res) {
