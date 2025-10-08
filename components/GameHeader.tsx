@@ -183,7 +183,7 @@ const GameHeader: React.FC<GameHeaderProps> = ({
         <GameInfo>
           <GameTitle>{gameTitle}</GameTitle>
           <GameStatus status={gameStatus}>
-            {gameStatus.toUpperCase()}
+            {gameStatus === 'active' ? '🎮 GAME COMMENCED' : gameStatus.toUpperCase()}
           </GameStatus>
         </GameInfo>
       </LeftSection>

@@ -480,10 +480,8 @@ export const useGameManager = () => {
       // Don't wait for blockchain confirmation - update immediately
       const newPoolAmount = game.poolAmount + amount;
       const newStakeCount = (game.stakeCount || 0) + 1;
-      // Only add player to array if they're not already there
-      const newPlayers = game.players.includes(walletInfo.address) 
-        ? game.players 
-        : [...game.players, walletInfo.address];
+      // Allow same player to stake twice for self-play
+      const newPlayers = [...game.players, walletInfo.address];
 
       console.log(`IMMEDIATELY updating game state: Pool: ${newPoolAmount} BNB, Stakes: ${newStakeCount}, Players: ${newPlayers.length}`);
       

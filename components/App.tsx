@@ -331,6 +331,8 @@ const App: React.FC = () => {
                     isUnstaking={false}
                     error={stakingStatus.error}
                     success={stakingStatus.success}
+                    stakeCount={selectedGame?.stakeCount || 0}
+                    maxPlayers={selectedGame?.maxPlayers || 2}
                   />
                 </GameInfoCard>
                 

@@ -220,7 +220,7 @@ export const GameWalletInfo: React.FC<GameWalletInfoProps> = ({ gameId, onBalanc
 
       <BalanceDisplay>
         <BalanceAmount>{walletInfo.balance.toFixed(4)} BNB</BalanceAmount>
-        <BalanceLabel>Pool Balance (Live from BSC)</BalanceLabel>
+        <BalanceLabel>Pool Balance</BalanceLabel>
         {walletInfo.balance > 0 && (
           <div style={{ 
             fontSize: '0.7rem', 

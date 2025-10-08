@@ -218,6 +218,8 @@ interface GameStakingProps {
   isUnstaking: boolean;
   error?: string;
   success?: string;
+  stakeCount?: number;
+  maxPlayers?: number;
 }
 
 const GameStaking: React.FC<GameStakingProps> = ({
@@ -229,7 +231,9 @@ const GameStaking: React.FC<GameStakingProps> = ({
   isStaking,
   isUnstaking,
   error,
-  success
+  success,
+  stakeCount = 0,
+  maxPlayers = 2
 }) => {
   const { walletInfo } = useWallet();
   const [confirmStake, setConfirmStake] = useState(false);
@@ -307,6 +311,35 @@ const GameStaking: React.FC<GameStakingProps> = ({
           <InfoValue>{formatBNB(stakeAmount * 2)} BNB</InfoValue>
         </InfoCard>
       </StakeInfo>
+
+      {/* Staking Counter */}
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center',
+        gap: spacing.sm,
+        padding: spacing.md,
+        background: colors.background.tertiary,
+        borderRadius: borderRadius.medium,
+        border: `1px solid ${colors.border.primary}`
+      }}>
+        <div style={{ 
+          fontSize: typography.fontSize.lg,
+          fontWeight: typography.fontWeight.bold,
+          color: stakeCount >= maxPlayers ? colors.accent.green : colors.text.primary
+        }}>
+          {stakeCount}/{maxPlayers} Staked
+        </div>
+        {stakeCount >= maxPlayers && (
+          <div style={{ 
+            fontSize: typography.fontSize.sm,
+            color: colors.accent.green,
+            fontWeight: typography.fontWeight.semibold
+          }}>
+            🎮 Game Ready!
+          </div>
+        )}
+      </div>
 
       {error && (
         <StakingError 
