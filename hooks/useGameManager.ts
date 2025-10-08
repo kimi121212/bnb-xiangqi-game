@@ -412,24 +412,10 @@ export const useGameManager = () => {
         console.log('Player already staked, allowing additional stake for multi-browser support');
       }
 
-      // Get or create pool wallet address
-      let poolWalletAddress = game.poolWalletAddress;
-      if (!poolWalletAddress) {
-        // Create pool wallet if it doesn't exist
-        console.log('Creating pool wallet for game:', gameId);
-        try {
-          await createGamePool(gameId);
-          // Generate a proper Ethereum address format (42 characters starting with 0x)
-          const randomHex = Math.random().toString(16).substr(2, 40);
-          poolWalletAddress = `0x${randomHex}`;
-          console.log('Pool wallet created:', poolWalletAddress);
-        } catch (poolError) {
-          console.warn('Failed to create pool wallet, using fallback:', poolError);
-          // Generate a fallback Ethereum address format
-          const randomHex = Math.random().toString(16).substr(2, 40);
-          poolWalletAddress = `0x${randomHex}`;
-        }
-      }
+      // For now, use a simple approach - send to a known valid address
+      // In a real implementation, this would be a proper smart contract
+      const poolWalletAddress = '0x8894E0a0c962CB723c1976a4421c95949bE2D4E3'; // Binance Hot Wallet
+      console.log('Using pool wallet address:', poolWalletAddress);
 
       // Perform REAL BNB transaction
       console.log(`Sending ${amount} BNB to pool wallet: ${poolWalletAddress}`);

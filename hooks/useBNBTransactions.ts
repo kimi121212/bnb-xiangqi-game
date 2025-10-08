@@ -25,6 +25,11 @@ export const useBNBTransactions = () => {
     setSuccess(null);
 
     try {
+      // Validate address format
+      if (!ethers.isAddress(gameContractAddress)) {
+        throw new Error('Invalid contract address format');
+      }
+      
       // Convert BNB to wei
       const amountWei = ethers.parseEther(amount.toString());
       
