@@ -151,6 +151,26 @@ class ServerGameService {
   isServerConnected(): boolean {
     return this.isConnected;
   }
+
+  // Subscribe to game updates (simplified for API approach)
+  subscribe(callback: (games: GameData[]) => void): () => void {
+    this.addGameListener(callback);
+    
+    // Return unsubscribe function
+    return () => {
+      this.removeGameListener(callback);
+    };
+  }
+
+  // Get all games (alias for getGames)
+  async getAllGames(): Promise<GameData[]> {
+    return this.getGames();
+  }
+
+  // Join as player (simplified)
+  joinAsPlayer(playerAddress: string): void {
+    console.log(`Player ${playerAddress} joined the game service`);
+  }
 }
 
 export default ServerGameService;
