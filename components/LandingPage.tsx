@@ -435,6 +435,16 @@ const LandingPage: React.FC<LandingPageProps> = ({
 
   const displayGames = activeTab === 'public' ? filteredGames : filteredUserGames;
 
+  // Debug logging
+  useEffect(() => {
+    console.log('🎮 LandingPage - Games received:', games);
+    console.log('🎮 LandingPage - Active games:', activeGames);
+    console.log('🎮 LandingPage - User games:', userGames);
+    console.log('🎮 LandingPage - Filtered games:', filteredGames);
+    console.log('🎮 LandingPage - Display games:', displayGames);
+    console.log('🎮 LandingPage - Active tab:', activeTab);
+  }, [games, activeGames, userGames, filteredGames, displayGames, activeTab]);
+
   const handleCreateGame = () => {
     setIsPrivateGame(false);
     setShowCustomStake(true);

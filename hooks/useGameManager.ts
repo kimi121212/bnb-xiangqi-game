@@ -91,7 +91,8 @@ export const useGameManager = () => {
         // Load initial games from server
         const initialGames = await serverGameService.getGames();
         setGames(initialGames);
-        console.log('Loaded games from server:', initialGames.length);
+        console.log('🎮 Loaded games from server:', initialGames.length);
+        console.log('🎮 Games data:', initialGames);
 
         // Subscribe to game updates
         unsubscribe = serverGameService.subscribe((updatedGames) => {

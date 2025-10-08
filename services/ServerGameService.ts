@@ -43,14 +43,20 @@ class ServerGameService {
   // Get all games from API
   async getGames(): Promise<GameData[]> {
     try {
+      console.log('🎮 Fetching games from API...');
       const response = await fetch('/api/games');
+      console.log('🎮 API response status:', response.status);
+      
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
+      
       const games = await response.json();
+      console.log('🎮 API returned games:', games.length);
+      console.log('🎮 Games data:', games);
       return games;
     } catch (error) {
-      console.error('Error fetching games:', error);
+      console.error('❌ Error fetching games:', error);
       return [];
     }
   }
