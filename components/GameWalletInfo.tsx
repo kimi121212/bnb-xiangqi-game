@@ -110,12 +110,15 @@ export const GameWalletInfo: React.FC<GameWalletInfoProps> = ({ gameId, onBalanc
       let realBalance = 0;
       if (userWallet.provider) {
         try {
+          console.log(`Fetching balance for wallet ${wallet.address} on BSC...`);
           realBalance = await clientWalletManager.getWalletBalance(gameId, userWallet.provider);
-          console.log(`Real BSC balance for ${wallet.address}: ${realBalance} BNB`);
+          console.log(`✅ Real BSC balance for ${wallet.address}: ${realBalance} BNB`);
         } catch (balanceError) {
-          console.warn('Could not fetch balance from BSC:', balanceError);
+          console.error('❌ Could not fetch balance from BSC:', balanceError);
           realBalance = 0;
         }
+      } else {
+        console.warn('No provider available for balance fetch');
       }
       
       setWalletInfo({
@@ -183,8 +186,28 @@ export const GameWalletInfo: React.FC<GameWalletInfoProps> = ({ gameId, onBalanc
       
       <WalletInfo>
         <InfoItem>
-          <InfoLabel>Address</InfoLabel>
-          <InfoValue>{walletInfo.address}</InfoValue>
+          <InfoLabel>Pool Wallet Address</InfoLabel>
+          <InfoValue style={{ 
+            fontSize: '0.8rem', 
+            wordBreak: 'break-all',
+            fontFamily: 'monospace'
+          }}>
+            {walletInfo.address}
+          </InfoValue>
+          <a 
+            href={`https://bscscan.com/address/${walletInfo.address}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              color: colors.primary,
+              textDecoration: 'none',
+              fontSize: '0.8rem',
+              marginTop: '4px',
+              display: 'inline-block'
+            }}
+          >
+            🔗 View on BSCScan
+          </a>
         </InfoItem>
         
         <InfoItem>
@@ -197,24 +220,57 @@ export const GameWalletInfo: React.FC<GameWalletInfoProps> = ({ gameId, onBalanc
 
       <BalanceDisplay>
         <BalanceAmount>{walletInfo.balance.toFixed(4)} BNB</BalanceAmount>
-        <BalanceLabel>Pool Balance</BalanceLabel>
+        <BalanceLabel>Pool Balance (Live from BSC)</BalanceLabel>
+        {walletInfo.balance > 0 && (
+          <div style={{ 
+            fontSize: '0.7rem', 
+            color: colors.success || '#10b981',
+            marginTop: '2px'
+          }}>
+            ✅ Funds detected in pool wallet
+          </div>
+        )}
       </BalanceDisplay>
 
-      <button 
-        onClick={fetchWalletInfo}
-        style={{
-          marginTop: spacing.sm,
-          padding: `${spacing.sm} ${spacing.md}`,
-          backgroundColor: colors.primary,
-          color: 'white',
-          border: 'none',
-          borderRadius: borderRadius.sm,
-          cursor: 'pointer',
-          fontSize: '0.9rem'
-        }}
-      >
-        {loading ? 'Checking...' : 'Check Wallet Balance'}
-      </button>
+      <div style={{ display: 'flex', gap: spacing.sm, marginTop: spacing.sm }}>
+        <button 
+          onClick={fetchWalletInfo}
+          style={{
+            padding: `${spacing.sm} ${spacing.md}`,
+            backgroundColor: colors.primary,
+            color: 'white',
+            border: 'none',
+            borderRadius: borderRadius.sm,
+            cursor: 'pointer',
+            fontSize: '0.9rem',
+            flex: 1
+          }}
+        >
+          {loading ? 'Checking...' : 'Check Balance'}
+        </button>
+        
+        <a
+          href={`https://bscscan.com/address/${walletInfo.address}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            padding: `${spacing.sm} ${spacing.md}`,
+            backgroundColor: colors.secondary || '#6b7280',
+            color: 'white',
+            border: 'none',
+            borderRadius: borderRadius.sm,
+            cursor: 'pointer',
+            fontSize: '0.9rem',
+            textDecoration: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flex: 1
+          }}
+        >
+          🔍 BSCScan
+        </a>
+      </div>
     </WalletContainer>
   );
 };

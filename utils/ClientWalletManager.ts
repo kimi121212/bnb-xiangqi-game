@@ -130,12 +130,18 @@ export class ClientWalletManager {
   async getWalletBalance(gameId: string, provider: ethers.Provider): Promise<number> {
     try {
       const wallet = this.getGameWallet(gameId);
-      if (!wallet) return 0;
+      if (!wallet) {
+        console.warn(`No wallet found for game ${gameId}`);
+        return 0;
+      }
 
+      console.log(`Fetching balance for wallet ${wallet.address} on BSC...`);
       const balance = await provider.getBalance(wallet.address);
-      return parseFloat(ethers.formatEther(balance));
+      const balanceInBNB = parseFloat(ethers.formatEther(balance));
+      console.log(`✅ Wallet ${wallet.address} balance: ${balanceInBNB} BNB`);
+      return balanceInBNB;
     } catch (error) {
-      console.error('Error getting wallet balance:', error);
+      console.error('❌ Error getting wallet balance:', error);
       return 0;
     }
   }
