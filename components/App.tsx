@@ -11,13 +11,13 @@ import BinanceHeader from './BinanceHeader';
 import LandingPage from './LandingPage';
 import GameBoard from './GameBoard';
 import GameHeader from './GameHeader';
-import GameStaking from './GameStaking';
+import SimpleGameStaking from './SimpleGameStaking';
 import SpectatorMode from './SpectatorMode';
 import GameDebug from './GameDebug';
 
 // Import hooks
 import { useWallet } from '../hooks/useWallet';
-import { useGameManager } from '../hooks/useGameManager';
+import { useSimpleGameManager } from '../hooks/useSimpleGameManager';
 import { useBNBPools } from '../hooks/useBNBPools';
 
 const GlobalStyle = createGlobalStyle`
@@ -106,7 +106,7 @@ const AppContent: React.FC = () => {
   
   // Initialize hooks
   const wallet = useWallet();
-  const gameManager = useGameManager();
+  const gameManager = useSimpleGameManager();
   const bnbPools = useBNBPools();
 
   // Get current game info
@@ -115,7 +115,13 @@ const AppContent: React.FC = () => {
   const stakeAmount = selectedGame?.stakeAmount || currentGame?.stakeAmount || 0;
   
   // Get staking status from game manager
-  const stakingStatus = gameManager.stakingStatus;
+  const stakingStatus = {
+    isStaked: false,
+    isStaking: gameManager.isStaking,
+    isUnstaking: false,
+    error: gameManager.stakingError,
+    success: gameManager.stakingSuccess
+  };
 
   // Load saved state from localStorage on component mount
   useEffect(() => {
@@ -324,18 +330,14 @@ const AppContent: React.FC = () => {
                 
                 <GameInfoCard>
                   <GameInfoTitle>Staking</GameInfoTitle>
-                  <GameStaking
-                    gameId={selectedGame?.id || ''}
-                    stakeAmount={stakeAmount}
-                    onStake={handleStakeForGame}
-                    isStaked={stakingStatus.isStaked}
-                    isStaking={stakingStatus.isStaking}
-                    isUnstaking={false}
-                    error={stakingStatus.error}
-                    success={stakingStatus.success}
-                    stakeCount={selectedGame?.stakeCount || 0}
-                    maxPlayers={selectedGame?.maxPlayers || 2}
-                  />
+                      <SimpleGameStaking
+                        gameId={selectedGame?.id || ''}
+                        stakeAmount={stakeAmount}
+                        onStakeSuccess={(hash) => {
+                          console.log('Stake successful:', hash);
+                          // Refresh games or update state as needed
+                        }}
+                      />
                 </GameInfoCard>
                 
                 
