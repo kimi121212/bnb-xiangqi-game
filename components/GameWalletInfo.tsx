@@ -85,12 +85,17 @@ export const GameWalletInfo: React.FC<GameWalletInfoProps> = ({ gameId, onBalanc
       setLoading(true);
       setError(null);
 
+      console.log(`Fetching wallet info for game: ${gameId}`);
       const response = await fetch(`/api/wallet/${gameId}`);
+      
       if (!response.ok) {
-        throw new Error('Failed to fetch wallet info');
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || `HTTP ${response.status}: Failed to fetch wallet info`);
       }
 
       const data = await response.json();
+      console.log('Wallet info received:', data);
+      
       setWalletInfo({
         address: data.address,
         balance: 0, // This would be fetched from blockchain
@@ -101,6 +106,7 @@ export const GameWalletInfo: React.FC<GameWalletInfoProps> = ({ gameId, onBalanc
         onBalanceUpdate(0);
       }
     } catch (err: any) {
+      console.error('Error fetching wallet info:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -120,7 +126,22 @@ export const GameWalletInfo: React.FC<GameWalletInfoProps> = ({ gameId, onBalanc
     return (
       <WalletContainer>
         <WalletHeader>Game Wallet</WalletHeader>
-        <div style={{ color: colors.error }}>Error: {error}</div>
+        <div style={{ color: colors.error, marginBottom: spacing.sm }}>
+          Error: {error}
+        </div>
+        <button 
+          onClick={fetchWalletInfo}
+          style={{
+            padding: `${spacing.sm} ${spacing.md}`,
+            backgroundColor: colors.primary,
+            color: 'white',
+            border: 'none',
+            borderRadius: borderRadius.sm,
+            cursor: 'pointer'
+          }}
+        >
+          Retry
+        </button>
       </WalletContainer>
     );
   }
