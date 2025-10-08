@@ -399,6 +399,7 @@ interface LandingPageProps {
   games?: any[];
   activeGames?: any[];
   userGames?: any[];
+  onRefreshGames?: () => void;
 }
 
 const LandingPage: React.FC<LandingPageProps> = ({
@@ -408,7 +409,8 @@ const LandingPage: React.FC<LandingPageProps> = ({
   onShowGuide,
   games = [],
   activeGames = [],
-  userGames = []
+  userGames = [],
+  onRefreshGames
 }) => {
   const { walletInfo } = useWallet();
   const { t } = useLanguage();
@@ -666,15 +668,33 @@ const LandingPage: React.FC<LandingPageProps> = ({
             <SectionTitle>
               {activeTab === 'public' ? 'Available Games' : 'Your Games'}
             </SectionTitle>
-            <SearchBar>
-              <Search size={16} color={colors.text.secondary} />
-              <SearchInput
-                type="text"
-                placeholder="Search games..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </SearchBar>
+            <div style={{ display: 'flex', gap: spacing.sm, alignItems: 'center' }}>
+              <SearchBar>
+                <Search size={16} color={colors.text.secondary} />
+                <SearchInput
+                  type="text"
+                  placeholder="Search games..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </SearchBar>
+              {onRefreshGames && (
+                <button
+                  onClick={onRefreshGames}
+                  style={{
+                    padding: `${spacing.sm} ${spacing.md}`,
+                    background: colors.primary,
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: borderRadius.sm,
+                    cursor: 'pointer',
+                    fontSize: typography.fontSize.sm
+                  }}
+                >
+                  🔄 Refresh
+                </button>
+              )}
+            </div>
           </GameListHeader>
 
           <TabContainer>

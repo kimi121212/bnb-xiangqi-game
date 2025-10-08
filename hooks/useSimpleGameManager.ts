@@ -37,6 +37,7 @@ export const useSimpleGameManager = () => {
         const serverGames = await serverGameService.getGames();
         setGames(serverGames);
         console.log('🎮 Loaded games:', serverGames.length);
+        console.log('🎮 Games data:', serverGames);
       } catch (error) {
         console.error('Failed to load games:', error);
         setGames([]);
@@ -46,6 +47,11 @@ export const useSimpleGameManager = () => {
     };
 
     loadGames();
+    
+    // Refresh games every 5 seconds
+    const interval = setInterval(loadGames, 5000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   // Create a new game
@@ -198,6 +204,22 @@ export const useSimpleGameManager = () => {
     return games.filter(game => game.status === 'active');
   }, [games]);
 
+  // Manual refresh games
+  const refreshGames = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const serverGames = await serverGameService.getGames();
+      setGames(serverGames);
+      console.log('🔄 Refreshed games:', serverGames.length);
+      return serverGames;
+    } catch (error) {
+      console.error('Failed to refresh games:', error);
+      return [];
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   return {
     // State
     games,
@@ -215,6 +237,7 @@ export const useSimpleGameManager = () => {
     exitGame,
     getUserGames,
     getActiveGames,
+    refreshGames,
     
     // Setters
     setCurrentGame

@@ -297,6 +297,7 @@ const AppContent: React.FC = () => {
             games={gameManager.games}
             activeGames={gameManager.games.filter((g: any) => g.status === 'active')}
             userGames={gameManager.getUserGames()}
+            onRefreshGames={gameManager.refreshGames}
           />
         );
       
