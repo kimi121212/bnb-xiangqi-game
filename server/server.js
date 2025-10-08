@@ -4,27 +4,84 @@ const socketIo = require('socket.io');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
+
+// CORS configuration for production
+const allowedOrigins = process.env.NODE_ENV === 'production' 
+  ? [process.env.FRONTEND_URL || 'https://bnb-xiangqi-game-production.up.railway.app']
+  : ["http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000", "http://127.0.0.1:3001"];
+
 const io = socketIo(server, {
   cors: {
-    origin: ["http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000", "http://127.0.0.1:3001"],
+    origin: allowedOrigins,
     methods: ["GET", "POST"]
   }
 });
 
 const PORT = process.env.PORT || 5001;
 
+// For Vercel, we need to export the app for serverless functions
+if (process.env.VERCEL) {
+  module.exports = app;
+} else {
+  // Only start the server if not in Vercel environment
+  server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
 // Middleware
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false // Disable CSP for Socket.IO
+}));
+
 app.use(cors({
-  origin: ["http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000", "http://127.0.0.1:3001"],
+  origin: allowedOrigins,
   credentials: true
 }));
 app.use(express.json());
+
+// Serve static files from the dist directory (built frontend)
+app.use(express.static(path.join(__dirname, '../dist')));
+
+// API routes
+app.get('/api/games', (req, res) => {
+  res.json(Array.from(games.values()));
+});
+
+app.get('/api/games/available', (req, res) => {
+  const availableGames = Array.from(games.values()).filter(game => 
+    game.status === 'waiting' && !game.isPrivate
+  );
+  res.json(availableGames);
+});
+
+app.get('/api/games/:id', (req, res) => {
+  const game = games.get(req.params.id);
+  if (!game) {
+    return res.status(404).json({ error: 'Game not found' });
+  }
+  res.json(game);
+});
+
+app.get('/api/stats', (req, res) => {
+  res.json({
+    totalGames: games.size,
+    activeGames: Array.from(games.values()).filter(g => g.status === 'active').length,
+    waitingGames: Array.from(games.values()).filter(g => g.status === 'waiting').length,
+    totalPlayers: players.size
+  });
+});
+
+// Catch-all handler: send back React's index.html file for any non-API routes
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dist/index.html'));
+});
 
 // Rate limiting
 const limiter = rateLimit({
@@ -33,10 +90,60 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// In-memory storage (in production, use Redis or database)
-const games = new Map();
+// File-based persistence for games
+const fs = require('fs');
+const path = require('path');
+const GAMES_FILE = path.join(__dirname, 'games.json');
+
+// Load games from file or create empty Map
+let games = new Map();
 const players = new Map();
 const spectators = new Map();
+
+// Load games from file on startup
+try {
+  if (fs.existsSync(GAMES_FILE)) {
+    const gamesData = JSON.parse(fs.readFileSync(GAMES_FILE, 'utf8'));
+    games = new Map(Object.entries(gamesData));
+    console.log(`Loaded ${games.size} games from file`);
+  }
+} catch (error) {
+  console.error('Error loading games from file:', error);
+  games = new Map();
+}
+
+// Save games to file
+const saveGames = () => {
+  try {
+    const gamesObj = Object.fromEntries(games);
+    fs.writeFileSync(GAMES_FILE, JSON.stringify(gamesObj, null, 2));
+  } catch (error) {
+    console.error('Error saving games to file:', error);
+  }
+};
+
+// Clean up old games (older than 24 hours)
+const cleanupOldGames = () => {
+  const now = Date.now();
+  const oneDayAgo = now - (24 * 60 * 60 * 1000);
+  
+  for (const [gameId, game] of games.entries()) {
+    if (game.createdAt < oneDayAgo && game.status === 'waiting') {
+      games.delete(gameId);
+      console.log(`Cleaned up old game: ${gameId}`);
+    }
+  }
+  
+  if (games.size > 0) {
+    saveGames();
+  }
+};
+
+// Save games every 5 minutes and cleanup old games
+setInterval(() => {
+  saveGames();
+  cleanupOldGames();
+}, 5 * 60 * 1000);
 
 // Game management functions
 const createGame = (gameData) => {
@@ -50,8 +157,8 @@ const createGame = (gameData) => {
     id: gameId,
     title: gameData.title,
     stakeAmount: gameData.stakeAmount,
-    players: [], // Empty players array - host must stake to join
-    maxPlayers: 2,
+    players: [], // EMPTY - host must stake to join
+    maxPlayers: gameData.maxPlayers || 2,
     status: 'waiting',
     isPrivate: gameData.isPrivate || false,
     password: gameData.password || '',
@@ -59,10 +166,12 @@ const createGame = (gameData) => {
     host: gameData.host,
     spectators: 0,
     poolAmount: 0,
-    poolWalletAddress: poolWalletAddress // Wallet created immediately
+    poolWalletAddress: poolWalletAddress, // Wallet created immediately
+    stakeCount: 0 // Track number of stakes (allows same wallet multiple times)
   };
   
   games.set(gameId, game);
+  saveGames(); // Save to file
   console.log(`Game created: ${gameId} by ${gameData.host} with wallet: ${poolWalletAddress}`);
   return game;
 };
@@ -73,23 +182,27 @@ const joinGame = (gameId, playerAddress) => {
     return { success: false, error: 'Game not found' };
   }
   
-  if (game.players.length >= game.maxPlayers) {
+  // For multi-browser support, allow same wallet to join multiple times
+  // Only prevent joining if the game is already full (2 players)
+  if (game.players.length >= game.maxPlayers && !game.players.includes(playerAddress)) {
     return { success: false, error: 'Game is full' };
   }
   
-  // Allow same wallet to join multiple times (multi-browser support)
-  // Only check if game is full, not if player is already in game
+  // If player already in game, allow re-entry
   if (game.players.includes(playerAddress)) {
     console.log(`Player ${playerAddress} already in game, allowing re-entry for multi-browser support`);
     return { success: true, game };
   }
   
+  // Add player to game
   game.players.push(playerAddress);
   
+  // Update game status if it reaches max players
   if (game.players.length === game.maxPlayers) {
     game.status = 'active';
   }
   
+  saveGames(); // Save to file
   console.log(`Player ${playerAddress} joined game ${gameId}`);
   return { success: true, game };
 };
@@ -209,6 +322,74 @@ app.get('/api/stats', (req, res) => {
     connectedSpectators: spectators.size
   };
   res.json(stats);
+});
+
+// POST endpoints for HTTP API
+app.post('/api/games', (req, res) => {
+  try {
+    const game = createGame(req.body);
+    res.status(201).json(game);
+  } catch (error) {
+    console.error('Error creating game:', error);
+    res.status(500).json({ error: 'Failed to create game' });
+  }
+});
+
+app.post('/api/games/:gameId/join', (req, res) => {
+  try {
+    const { gameId } = req.params;
+    const { playerAddress, password } = req.body;
+    
+    let result;
+    if (password) {
+      result = joinPrivateGame(gameId, playerAddress, password);
+    } else {
+      result = joinGame(gameId, playerAddress);
+    }
+    
+    if (result.success) {
+      res.json(result.game);
+    } else {
+      res.status(400).json({ error: result.error });
+    }
+  } catch (error) {
+    console.error('Error joining game:', error);
+    res.status(500).json({ error: 'Failed to join game' });
+  }
+});
+
+app.post('/api/games/:gameId/status', (req, res) => {
+  try {
+    const { gameId } = req.params;
+    const { status } = req.body;
+    
+    const game = updateGameStatus(gameId, status);
+    if (game) {
+      res.json(game);
+    } else {
+      res.status(404).json({ error: 'Game not found' });
+    }
+  } catch (error) {
+    console.error('Error updating game status:', error);
+    res.status(500).json({ error: 'Failed to update game status' });
+  }
+});
+
+app.post('/api/games/:gameId/pool', (req, res) => {
+  try {
+    const { gameId } = req.params;
+    const { amount } = req.body;
+    
+    const game = updatePoolAmount(gameId, amount);
+    if (game) {
+      res.json(game);
+    } else {
+      res.status(404).json({ error: 'Game not found' });
+    }
+  } catch (error) {
+    console.error('Error updating pool amount:', error);
+    res.status(500).json({ error: 'Failed to update pool amount' });
+  }
 });
 
 // Socket.IO connection handling

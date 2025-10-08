@@ -371,7 +371,7 @@ const GameGuide: React.FC = () => {
     },
     {
       id: 'pieces',
-      title: 'Pieces & Values',
+      title: 'Pieces & Movement',
       icon: <Coins size={20} />,
       content: (
         <div>
@@ -381,64 +381,56 @@ const GameGuide: React.FC = () => {
             fontSize: typography.fontSize.md,
             lineHeight: typography.lineHeight.relaxed
           }}>
-            Each piece has a BNB value. When you capture an opponent's piece, you earn its BNB value.
-            The winner takes the entire staked pool plus all captured piece values.
+            Each piece has specific movement rules. The goal is to capture your opponent's General.
+            The winner takes the entire staked BNB pool - no piece values, just pure strategy!
           </p>
           
           <PieceGrid>
             <PieceCard>
               <PieceIcon color="red">帅</PieceIcon>
               <PieceName>General (Red)</PieceName>
-              <PieceValue>100 BNB</PieceValue>
-              <PieceDescription>Moves one step horizontally or vertically within palace</PieceDescription>
+              <PieceDescription>Moves one step horizontally or vertically within palace. Cannot leave the palace!</PieceDescription>
             </PieceCard>
             
             <PieceCard>
               <PieceIcon color="black">将</PieceIcon>
               <PieceName>General (Black)</PieceName>
-              <PieceValue>100 BNB</PieceValue>
-              <PieceDescription>Moves one step horizontally or vertically within palace</PieceDescription>
+              <PieceDescription>Moves one step horizontally or vertically within palace. Cannot leave the palace!</PieceDescription>
             </PieceCard>
             
             <PieceCard>
               <PieceIcon color="red">车</PieceIcon>
               <PieceName>Chariot</PieceName>
-              <PieceValue>50 BNB</PieceValue>
-              <PieceDescription>Moves horizontally or vertically any distance</PieceDescription>
+              <PieceDescription>Moves horizontally or vertically any distance. Most powerful piece!</PieceDescription>
             </PieceCard>
             
             <PieceCard>
               <PieceIcon color="red">马</PieceIcon>
               <PieceName>Horse</PieceName>
-              <PieceValue>30 BNB</PieceValue>
-              <PieceDescription>Moves in L-shape, cannot jump over pieces</PieceDescription>
+              <PieceDescription>Moves in L-shape, cannot jump over pieces. Watch for blocking!</PieceDescription>
             </PieceCard>
             
             <PieceCard>
               <PieceIcon color="red">炮</PieceIcon>
               <PieceName>Cannon</PieceName>
-              <PieceValue>25 BNB</PieceValue>
               <PieceDescription>Moves like chariot, captures by jumping over one piece</PieceDescription>
             </PieceCard>
             
             <PieceCard>
               <PieceIcon color="red">仕</PieceIcon>
               <PieceName>Advisor</PieceName>
-              <PieceValue>20 BNB</PieceValue>
-              <PieceDescription>Moves diagonally one step within palace</PieceDescription>
+              <PieceDescription>Moves diagonally one step within palace. Protects the General!</PieceDescription>
             </PieceCard>
             
             <PieceCard>
               <PieceIcon color="red">相</PieceIcon>
               <PieceName>Elephant</PieceName>
-              <PieceValue>15 BNB</PieceValue>
               <PieceDescription>Moves diagonally two steps, cannot cross river</PieceDescription>
             </PieceCard>
             
             <PieceCard>
               <PieceIcon color="red">兵</PieceIcon>
               <PieceName>Soldier</PieceName>
-              <PieceValue>5 BNB</PieceValue>
               <PieceDescription>Moves forward, horizontally after crossing river</PieceDescription>
             </PieceCard>
           </PieceGrid>
@@ -458,7 +450,7 @@ const GameGuide: React.FC = () => {
             lineHeight: typography.lineHeight.relaxed
           }}>
             All games require BNB staking. Players must stake the same amount to enter a game. 
-            The winner takes the entire staked pool plus any captured piece values.
+            The winner takes the entire staked pool - it's that simple!
           </p>
           
           <StakingInfo>
@@ -479,8 +471,8 @@ const GameGuide: React.FC = () => {
               </StakingIcon>
               <StakingTitle>Winner Takes All</StakingTitle>
               <StakingDescription>
-                The winner receives the entire staked pool plus the BNB value 
-                of all captured pieces.
+                The winner receives the entire staked BNB pool. 
+                No piece values - just pure winner-takes-all!
               </StakingDescription>
             </StakingCard>
             
@@ -521,26 +513,26 @@ const GameGuide: React.FC = () => {
             fontSize: typography.fontSize.md,
             lineHeight: typography.lineHeight.relaxed
           }}>
-            Master these strategies to maximize your BNB earnings and win more games.
+            Master these strategies to win more games and claim the entire BNB pool!
           </p>
           
           <RuleList>
             <RuleItem>
               <RuleIcon>🎯</RuleIcon>
               <RuleText>
-                <strong>Protect Your General:</strong> Your General is worth 100 BNB - protect it at all costs!
+                <strong>Protect Your General:</strong> Your General is your most important piece - protect it at all costs!
               </RuleText>
             </RuleItem>
             <RuleItem>
               <RuleIcon>💰</RuleIcon>
               <RuleText>
-                <strong>Target High-Value Pieces:</strong> Focus on capturing Chariots (50 BNB) and Horses (30 BNB)
+                <strong>Control Key Pieces:</strong> Focus on controlling Chariots and Horses for maximum mobility
               </RuleText>
             </RuleItem>
             <RuleItem>
               <RuleIcon>⚔️</RuleIcon>
               <RuleText>
-                <strong>Control the Center:</strong> Central pieces have more mobility and earning potential
+                <strong>Control the Center:</strong> Central pieces have more mobility and strategic advantage
               </RuleText>
             </RuleItem>
             <RuleItem>
@@ -558,7 +550,7 @@ const GameGuide: React.FC = () => {
             <RuleItem>
               <RuleIcon>🎲</RuleIcon>
               <RuleText>
-                <strong>Calculate Risk vs Reward:</strong> Sometimes sacrificing a piece is worth it for a bigger capture
+                <strong>Think Strategically:</strong> Every move should bring you closer to capturing the opponent's General
               </RuleText>
             </RuleItem>
           </RuleList>

@@ -63,39 +63,42 @@ export const useGameManager = () => {
     isUnstaking: false
   });
 
-  // Check if current player has staked in the current game
+  // Check if current player has staked in the current game (SIMPLE CHECK)
   const checkPlayerStaked = useCallback(async (gameId: string) => {
     if (!walletInfo.isConnected || !gameId) return false;
-    
+
     try {
-      const hasStaked = await hasPlayerStaked(gameId, walletInfo.address);
+      // Find the game
+      const game = games.find(g => g.id === gameId);
+      if (!game) return false;
+
+      // Check if player is in the players array (they have staked)
+      const hasStaked = game.players.includes(walletInfo.address);
+      console.log(`Player ${walletInfo.address} staked in game ${gameId}: ${hasStaked}`);
       return hasStaked;
     } catch (error) {
       console.error('Error checking player stake:', error);
       return false;
     }
-  }, [walletInfo, hasPlayerStaked]);
+  }, [walletInfo, games]);
 
-  // Connect to server and subscribe to game updates
+  // Connect to server and subscribe to game updates (separate from wallet connection)
   useEffect(() => {
     let unsubscribe: (() => void) | null = null;
 
     const initializeServer = async () => {
       try {
-        // Connect to server
+        // Connect to server (with fallback to HTTP-only mode)
         await serverGameService.connect();
         console.log('Connected to game server');
 
-        // Join as player if wallet is connected
-        if (walletInfo.isConnected) {
-          serverGameService.joinAsPlayer(walletInfo.address);
-        }
-
         // Subscribe to game updates with live data refresh
         unsubscribe = serverGameService.subscribe((updatedGames) => {
-          setGames(updatedGames);
           console.log('Games updated from server:', updatedGames.length);
-          
+          console.log('Updated games data:', updatedGames.map(g => ({ id: g.id, title: g.title, players: g.players.length })));
+
+          setGames(updatedGames);
+
           // Update current game if it's in the updated games
           if (currentGame) {
             const updatedCurrentGame = updatedGames.find(g => g.id === currentGame.id);
@@ -106,8 +109,15 @@ export const useGameManager = () => {
           }
         });
 
-        // Load initial games
+        // Load initial games from server
         const initialGames = await serverGameService.getAllGames();
+        console.log('Loaded initial games from server:', initialGames.length);
+        console.log('Initial games:', initialGames.map(g => ({
+          id: g.id,
+          title: g.title,
+          players: g.players.length,
+          poolWalletAddress: g.poolWalletAddress
+        })));
         setGames(initialGames);
 
       } catch (error) {
@@ -124,39 +134,93 @@ export const useGameManager = () => {
       if (unsubscribe) {
         unsubscribe();
       }
-      serverGameService.disconnect();
+      // No WebSocket disconnect needed for HTTP-only mode
     };
+  }, []); // Remove wallet dependencies - server connection is independent
+
+  // Handle wallet connection changes separately
+  useEffect(() => {
+    if (walletInfo.isConnected && serverGameService.isConnected) {
+      serverGameService.joinAsPlayer(walletInfo.address);
+    }
   }, [walletInfo.isConnected, walletInfo.address]);
 
-  // Update staking status when current game changes - SIMPLIFIED APPROACH
+  // Ensure games are loaded on component mount (fallback for page refresh)
   useEffect(() => {
-    const updateStakingStatus = () => {
-      if (!currentGame || !walletInfo.isConnected) {
+    const loadGamesOnMount = async () => {
+      try {
+        if (serverGameService.isConnected) {
+          const games = await serverGameService.getAllGames();
+          setGames(games);
+          console.log('Games loaded on mount:', games.length);
+        }
+      } catch (error) {
+        console.error('Failed to load games on mount:', error);
+      }
+    };
+
+    // Small delay to ensure server is connected
+    const timer = setTimeout(loadGamesOnMount, 1000);
+    return () => clearTimeout(timer);
+  }, []); // Run only on mount
+
+  // Update staking status when current game changes - CHECK ACTUAL BNB BALANCE
+  useEffect(() => {
+    const updateStakingStatus = async () => {
+      if (!currentGame || !walletInfo.isConnected || !currentGame.poolWalletAddress) {
         setStakingStatus(prev => ({ ...prev, isStaked: false }));
         return;
       }
 
-      // SIMPLIFIED: Check if player is in the game's players array
-      const hasStaked = currentGame.players.includes(walletInfo.address);
-      setStakingStatus(prev => ({ ...prev, isStaked: hasStaked }));
-      console.log(`Staking status updated: ${hasStaked} for game ${currentGame.id}`);
+      try {
+        // Check if player has actually staked by checking pool wallet balance
+        const hasStaked = await checkPlayerStaked(currentGame.id);
+        setStakingStatus(prev => ({ ...prev, isStaked: hasStaked }));
+        console.log(`Staking status updated: ${hasStaked} for game ${currentGame.id} (real BNB check)`);
+      } catch (error) {
+        console.error('Error checking staking status:', error);
+        setStakingStatus(prev => ({ ...prev, isStaked: false }));
+      }
     };
 
     updateStakingStatus();
-  }, [currentGame, walletInfo.isConnected, walletInfo.address]);
+  }, [currentGame, walletInfo.isConnected, walletInfo.address, checkPlayerStaked]);
 
-  // Auto-refresh staking status every 2 seconds for live updates
+  // Auto-refresh staking status every 5 seconds for live updates
   useEffect(() => {
     if (!currentGame || !walletInfo.isConnected) return;
 
-    const interval = setInterval(() => {
-      // SIMPLIFIED: Direct check from current game state
-      const hasStaked = currentGame.players.includes(walletInfo.address);
-      setStakingStatus(prev => ({ ...prev, isStaked: hasStaked }));
-    }, 2000);
+    const interval = setInterval(async () => {
+      try {
+        const hasStaked = await checkPlayerStaked(currentGame.id);
+        setStakingStatus(prev => ({ ...prev, isStaked: hasStaked }));
+        console.log(`Auto-refresh staking status: ${hasStaked} for game ${currentGame.id}`);
+      } catch (error) {
+        console.error('Error in auto-refresh staking status:', error);
+      }
+    }, 5000);
 
     return () => clearInterval(interval);
-  }, [currentGame, walletInfo.isConnected, walletInfo.address]);
+  }, [currentGame, walletInfo.isConnected, walletInfo.address, checkPlayerStaked]);
+
+  // Periodic game refresh to ensure games stay loaded
+  useEffect(() => {
+    const refreshGames = async () => {
+      try {
+        if (serverGameService.isConnected) {
+          const games = await serverGameService.getAllGames();
+          setGames(games);
+          console.log('Periodic games refresh:', games.length);
+        }
+      } catch (error) {
+        console.error('Failed to refresh games:', error);
+      }
+    };
+
+    // Refresh games every 30 seconds
+    const interval = setInterval(refreshGames, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Create a new game
   const createGame = useCallback(async (gameData: {
@@ -193,12 +257,12 @@ export const useGameManager = () => {
       // Create wallet for this game immediately
       const poolWalletAddress = `pool_${gameId}_${Date.now()}`;
       
-      // Create game - HOST IS NOT AUTOMATICALLY A PLAYER
+      // Create game - HOST MUST STAKE TO JOIN (NO AUTO-ADD)
       const newGame: GameData = {
         id: gameId,
         title: gameData.title,
         stakeAmount: gameData.stakeAmount,
-        players: [], // Empty players array - host must stake to join
+        players: [], // EMPTY - host must stake to join
         maxPlayers: gameData.maxPlayers || 2,
         status: 'waiting',
         isPrivate: gameData.isPrivate,
@@ -229,6 +293,8 @@ export const useGameManager = () => {
         }
         
         setCurrentGame(serverGame);
+        // Add to local games list
+        setGames(prev => [...prev, serverGame]);
         // Reset staking status for new game
         setStakingStatus(prev => ({ ...prev, isStaked: false, isStaking: false, isUnstaking: false, error: undefined, success: undefined }));
         console.log('Game created on server:', serverGame.id);
@@ -237,6 +303,8 @@ export const useGameManager = () => {
         console.warn('Server unavailable, creating local game:', serverError);
         // Fallback to local game creation
         setCurrentGame(newGame);
+        // Add to local games list
+        setGames(prev => [...prev, newGame]);
         // Reset staking status for new game
         setStakingStatus(prev => ({ ...prev, isStaked: false, isStaking: false, isUnstaking: false, error: undefined, success: undefined }));
         console.log('Game created locally:', newGame.id);
@@ -314,7 +382,7 @@ export const useGameManager = () => {
       setGames(prevGames => 
         prevGames.map(g => 
           g.id === gameId 
-            ? { ...g, players: [...g.players, walletInfo.address] }
+            ? { ...g, players: updatedGame.players }
             : g
         )
       );
@@ -529,14 +597,27 @@ export const useGameManager = () => {
 
       // Update server with new pool amount and players
       console.log(`Updating server pool amount: ${newPoolAmount} BNB for game ${gameId}`);
-      await serverGameService.updatePoolAmount(gameId, newPoolAmount);
+      try {
+        await serverGameService.updatePoolAmount(gameId, newPoolAmount);
+        console.log('Server pool amount updated successfully');
+      } catch (error) {
+        console.error('Failed to update server pool amount:', error);
+        // Continue anyway - local state is updated
+      }
       
       // Check if game is ready to start (2 stakes total, allows same wallet)
       if (newStakeCount >= 2) {
         console.log('Game ready to start - 2 stakes completed');
-        await serverGameService.updateGameStatus(gameId, 'active');
-        setGames(prevGames => 
-          prevGames.map(g => 
+        try {
+          await serverGameService.updateGameStatus(gameId, 'active');
+          console.log('Server game status updated to active');
+        } catch (error) {
+          console.error('Failed to update server game status:', error);
+          // Continue anyway - local state is updated
+        }
+
+        setGames(prevGames =>
+          prevGames.map(g =>
             g.id === gameId ? { ...g, status: 'active' } : g
           )
         );

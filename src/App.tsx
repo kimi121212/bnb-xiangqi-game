@@ -157,26 +157,35 @@ const App: React.FC = () => {
     }
   }, [gameManager.games, selectedGame]);
 
-  // Save current view and game to localStorage
+  // Save current view and game to localStorage (but not when creating a game)
   useEffect(() => {
-    localStorage.setItem('bnb-xiangqi-current-view', currentView);
-    if (selectedGame) {
-      localStorage.setItem('bnb-xiangqi-current-game-id', selectedGame.id);
+    // Don't save state when creating a game - let user stay in game view
+    if (currentView === 'game' && selectedGame) {
+      const isCreatingGame = localStorage.getItem('bnb-xiangqi-creating-game');
+      if (!isCreatingGame) {
+        localStorage.setItem('bnb-xiangqi-current-view', currentView);
+        localStorage.setItem('bnb-xiangqi-current-game-id', selectedGame.id);
+      }
+    } else {
+      localStorage.setItem('bnb-xiangqi-current-view', currentView);
+      if (selectedGame) {
+        localStorage.setItem('bnb-xiangqi-current-game-id', selectedGame.id);
+      }
     }
   }, [currentView, selectedGame]);
 
   const handleCreateGame = useCallback(async (customStakeAmount?: number, gameName?: string, isPrivate?: boolean, password?: string) => {
     try {
       console.log('Creating new game...', { customStakeAmount, gameName, isPrivate, password });
-      
+
       // Check if wallet is connected
       if (!wallet.walletInfo.isConnected) {
         throw new Error('Wallet not connected. Please connect your wallet first.');
       }
-      
+
       const stakeAmount = customStakeAmount || 0.001; // Use custom amount or default minimum
       const title = gameName || (isPrivate ? 'Private Xiangqi Game' : 'Public Xiangqi Game');
-      
+
       const gameData = {
         title: title,
         stakeAmount: stakeAmount,
@@ -185,22 +194,44 @@ const App: React.FC = () => {
         maxPlayers: 2,
         host: wallet.walletInfo.address
       };
-      
+
+      // Set flag to prevent saving state during game creation
+      localStorage.setItem('bnb-xiangqi-creating-game', 'true');
+
       const game = await gameManager.createGame(gameData);
       console.log('Game created:', game);
-      
+
       // Ensure the game has a game instance
       if (!game.gameInstance) {
         console.log('Adding game instance to created game');
         game.gameInstance = new (await import('./utils/xiangqiLogic')).XiangqiGame();
       }
+
+      // Automatically join the game as the host
+      try {
+        const joinedGame = await gameManager.joinGame(game.id, game.stakeAmount);
+        console.log('Host automatically joined game:', joinedGame);
+        gameManager.setCurrentGame(joinedGame);
+        setSelectedGame(joinedGame);
+      } catch (joinError) {
+        console.warn('Failed to auto-join game, using created game:', joinError);
+        gameManager.setCurrentGame(game);
+        setSelectedGame(game);
+      }
       
-      setSelectedGame(game);
       setCurrentView('game');
+
+      // Clear the flag after a short delay
+      setTimeout(() => {
+        localStorage.removeItem('bnb-xiangqi-creating-game');
+      }, 1000);
+
     } catch (error: any) {
       console.error('Error creating game:', error);
       const errorMessage = error.message || 'Unknown error occurred';
       alert(`Failed to create game: ${errorMessage}`);
+      // Clear the flag on error too
+      localStorage.removeItem('bnb-xiangqi-creating-game');
     }
   }, [gameManager, wallet]);
 

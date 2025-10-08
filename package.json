@@ -1,19 +1,20 @@
 {
   "name": "bnb-xiangqi-game",
-  "private": true,
   "version": "1.0.0",
-  "type": "module",
+  "description": "BNB Staking Xiangqi Game - Full Stack",
+  "main": "server/server.js",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
     "start": "node server/server.js",
-    "deploy": "npm run build && npm start"
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "cd server && npm start",
+    "client": "cd . && npm run dev",
+    "build": "npm run build:client",
+    "build:client": "vite build",
+    "install:all": "npm install && cd server && npm install",
+    "postinstall": "npm run build:client",
+    "vercel-build": "npm run build:client"
   },
   "dependencies": {
-    "@types/react": "^18.2.66",
-    "@types/react-dom": "^18.2.22",
-    "ethers": "^6.11.1",
     "express": "^4.18.2",
     "socket.io": "^4.7.4",
     "cors": "^2.8.5",
@@ -21,15 +22,24 @@
     "dotenv": "^16.3.1",
     "helmet": "^7.1.0",
     "express-rate-limit": "^7.1.5",
+    "ethers": "^6.11.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "styled-components": "^6.1.8",
-    "framer-motion": "^11.0.8",
-    "lucide-react": "^0.363.0"
+    "react-hot-toast": "^2.4.1",
+    "styled-components": "^6.1.6",
+    "framer-motion": "^10.16.16",
+    "socket.io-client": "^4.7.4",
+    "lucide-react": "^0.294.0"
   },
   "devDependencies": {
+    "concurrently": "^8.2.2",
+    "vite": "^4.5.14",
     "@vitejs/plugin-react": "^4.2.1",
-    "typescript": "^5.2.2",
-    "vite": "^4.5.14"
+    "@types/react": "^18.2.43",
+    "@types/react-dom": "^18.2.17",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
