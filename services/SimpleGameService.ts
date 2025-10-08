@@ -1,173 +1,149 @@
 import { GameData } from '../hooks/useGameManager';
-import { XiangqiGame } from '../utils/xiangqiLogic';
 
 class SimpleGameService {
-  private games: Map<string, GameData> = new Map();
-  private listeners: Set<(games: GameData[]) => void> = new Set();
-  private storageKey = 'bnb-xiangqi-games';
+  private baseUrl: string;
 
-  constructor() {
-    this.loadGamesFromStorage();
-    // Auto-save every 5 seconds
-    setInterval(() => this.saveGamesToStorage(), 5000);
-  }
-
-  // Load games from localStorage
-  private loadGamesFromStorage() {
-    try {
-      const stored = localStorage.getItem(this.storageKey);
-      if (stored) {
-        const gamesArray = JSON.parse(stored);
-        this.games.clear();
-        gamesArray.forEach((game: GameData) => {
-          this.games.set(game.id, game);
-        });
-        console.log(`Loaded ${this.games.size} games from storage`);
-      }
-    } catch (error) {
-      console.error('Error loading games from storage:', error);
-    }
-  }
-
-  // Save games to localStorage
-  private saveGamesToStorage() {
-    try {
-      const gamesArray = Array.from(this.games.values());
-      localStorage.setItem(this.storageKey, JSON.stringify(gamesArray));
-    } catch (error) {
-      console.error('Error saving games to storage:', error);
-    }
-  }
-
-  // Notify all listeners
-  private notifyListeners() {
-    const gamesArray = Array.from(this.games.values());
-    this.listeners.forEach(listener => listener(gamesArray));
+  constructor(baseUrl: string = '') {
+    this.baseUrl = baseUrl;
   }
 
   // Get all games
-  getAllGames(): GameData[] {
-    return Array.from(this.games.values());
-  }
-
-  // Get game by ID
-  getGameById(gameId: string): GameData | null {
-    return this.games.get(gameId) || null;
-  }
-
-  // Create new game
-  createGame(gameData: Partial<GameData>): GameData {
-    const gameId = `game_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const newGame: GameData = {
-      id: gameId,
-      title: gameData.title || 'Untitled Game',
-      stakeAmount: gameData.stakeAmount || 0.001,
-      maxPlayers: gameData.maxPlayers || 2,
-      isPrivate: gameData.isPrivate || false,
-      password: gameData.password || '',
-      host: gameData.host || '',
-      players: [], // Don't automatically add host to players - they need to stake first
-      status: 'waiting',
-      createdAt: Date.now(),
-      spectators: 0,
-      poolAmount: 0,
-      stakeCount: 0,
-      gameInstance: new XiangqiGame()
-    };
-
-    // Ensure gameInstance is properly initialized
-    if (!newGame.gameInstance || typeof newGame.gameInstance.getGameState !== 'function') {
-      console.log('Reinitializing gameInstance for game:', gameId);
-      newGame.gameInstance = new XiangqiGame();
-    }
-
-    this.games.set(gameId, newGame);
-    this.notifyListeners();
-    console.log(`Created game: ${gameId}`);
-    return newGame;
-  }
-
-  // Join game
-  joinGame(gameId: string, playerAddress: string): GameData | null {
-    const game = this.games.get(gameId);
-    if (!game) {
-      throw new Error('Game not found');
-    }
-
-    if (game.players.length >= game.maxPlayers) {
-      throw new Error('Game is full');
-    }
-
-    if (game.status !== 'waiting') {
-      throw new Error('Game is no longer accepting players');
-    }
-
-    if (!game.players.includes(playerAddress)) {
-      game.players.push(playerAddress);
+  async getGames(): Promise<GameData[]> {
+    try {
+      console.log('🎮 Fetching games from API...');
+      const response = await fetch(`${this.baseUrl}/api/games`);
       
-      if (game.players.length >= game.maxPlayers) {
-        game.status = 'active';
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
       
-      this.notifyListeners();
-      console.log(`Player ${playerAddress} joined game ${gameId}`);
+      const games = await response.json();
+      console.log(`🎮 API returned ${games.length} games`);
+      return games;
+    } catch (error) {
+      console.error('❌ Error fetching games:', error);
+      return [];
     }
-
-    return game;
   }
 
-  // Update game status
-  updateGameStatus(gameId: string, status: string): GameData | null {
-    const game = this.games.get(gameId);
-    if (!game) {
-      throw new Error('Game not found');
+  // Create a new game
+  async createGame(gameData: Partial<GameData>): Promise<GameData | null> {
+    try {
+      console.log('🎮 Creating game:', gameData);
+      const response = await fetch(`${this.baseUrl}/api/games`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'create',
+          ...gameData
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+
+      const newGame = await response.json();
+      console.log(`🎮 Created game: ${newGame.id}`);
+      return newGame;
+    } catch (error) {
+      console.error('❌ Error creating game:', error);
+      return null;
     }
-
-    game.status = status;
-    this.notifyListeners();
-    console.log(`Updated game ${gameId} status to ${status}`);
-    return game;
   }
 
-  // Update pool amount
-  updatePoolAmount(gameId: string, amount: number): GameData | null {
-    const game = this.games.get(gameId);
-    if (!game) {
-      throw new Error('Game not found');
+  // Join a game
+  async joinGame(gameId: string, playerAddress: string): Promise<GameData | null> {
+    try {
+      console.log(`👤 Joining game ${gameId} as ${playerAddress}`);
+      const response = await fetch(`${this.baseUrl}/api/games`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'join',
+          gameId,
+          playerAddress
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+
+      const game = await response.json();
+      console.log(`👤 Joined game: ${gameId}`);
+      return game;
+    } catch (error) {
+      console.error('❌ Error joining game:', error);
+      return null;
     }
-
-    game.poolAmount = (game.poolAmount || 0) + amount;
-    game.stakeCount = (game.stakeCount || 0) + 1;
-    this.notifyListeners();
-    console.log(`Updated game ${gameId} pool amount by ${amount}`);
-    return game;
   }
 
-  // Subscribe to game updates
-  subscribe(callback: (games: GameData[]) => void): () => void {
-    this.listeners.add(callback);
-    
-    // Immediately call with current games
-    callback(this.getAllGames());
-    
-    return () => {
-      this.listeners.delete(callback);
-    };
+  // Stake for a game
+  async stakeForGame(gameId: string, amount: number, playerAddress: string): Promise<GameData | null> {
+    try {
+      console.log(`💰 Staking ${amount} BNB for game ${gameId}`);
+      const response = await fetch(`${this.baseUrl}/api/games`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'stake',
+          gameId,
+          amount,
+          playerAddress
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+
+      const game = await response.json();
+      console.log(`💰 Staked for game: ${gameId}`);
+      return game;
+    } catch (error) {
+      console.error('❌ Error staking for game:', error);
+      return null;
+    }
   }
 
-  // Connect (always succeeds for simple service)
-  connect(): Promise<void> {
-    return Promise.resolve();
-  }
+  // Update a game
+  async updateGame(gameId: string, updates: Partial<GameData>): Promise<GameData | null> {
+    try {
+      console.log(`🔄 Updating game ${gameId}:`, updates);
+      const response = await fetch(`${this.baseUrl}/api/games`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'update',
+          gameId,
+          ...updates
+        }),
+      });
 
-  // Disconnect
-  disconnect(): void {
-    this.listeners.clear();
-  }
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
 
-  // Check if connected
-  isServerConnected(): boolean {
-    return true;
+      const game = await response.json();
+      console.log(`🔄 Updated game: ${gameId}`);
+      return game;
+    } catch (error) {
+      console.error('❌ Error updating game:', error);
+      return null;
+    }
   }
 }
 

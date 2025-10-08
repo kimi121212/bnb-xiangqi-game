@@ -11,13 +11,13 @@ import BinanceHeader from './BinanceHeader';
 import LandingPage from './LandingPage';
 import GameBoard from './GameBoard';
 import GameHeader from './GameHeader';
-import SimpleGameStaking from './SimpleGameStaking';
+import WorkingGameStaking from './WorkingGameStaking';
 import SpectatorMode from './SpectatorMode';
 import GameDebug from './GameDebug';
 
 // Import hooks
 import { useWallet } from '../hooks/useWallet';
-import { useSimpleGameManager } from '../hooks/useSimpleGameManager';
+import { useWorkingGameManager } from '../hooks/useWorkingGameManager';
 import { useBNBPools } from '../hooks/useBNBPools';
 
 const GlobalStyle = createGlobalStyle`
@@ -106,7 +106,7 @@ const AppContent: React.FC = () => {
   
   // Initialize hooks
   const wallet = useWallet();
-  const gameManager = useSimpleGameManager();
+  const gameManager = useWorkingGameManager();
   const bnbPools = useBNBPools();
 
   // Get current game info
@@ -115,13 +115,7 @@ const AppContent: React.FC = () => {
   const stakeAmount = selectedGame?.stakeAmount || currentGame?.stakeAmount || 0;
   
   // Get staking status from game manager
-  const stakingStatus = {
-    isStaked: false,
-    isStaking: gameManager.isStaking,
-    isUnstaking: false,
-    error: gameManager.stakingError,
-    success: gameManager.stakingSuccess
-  };
+  const stakingStatus = gameManager.stakingStatus;
 
   // Load saved state from localStorage on component mount
   useEffect(() => {
@@ -297,7 +291,7 @@ const AppContent: React.FC = () => {
             games={gameManager.games}
             activeGames={gameManager.games.filter((g: any) => g.status === 'active')}
             userGames={gameManager.getUserGames()}
-            onRefreshGames={gameManager.refreshGames}
+            onRefreshGames={gameManager.loadGames}
           />
         );
       
@@ -331,13 +325,16 @@ const AppContent: React.FC = () => {
                 
                 <GameInfoCard>
                   <GameInfoTitle>Staking</GameInfoTitle>
-                      <SimpleGameStaking
+                      <WorkingGameStaking
                         gameId={selectedGame?.id || ''}
                         stakeAmount={stakeAmount}
-                        onStakeSuccess={(hash) => {
-                          console.log('Stake successful:', hash);
-                          // Refresh games or update state as needed
+                        onStake={async (amount) => {
+                          return await gameManager.stakeForGame(selectedGame?.id || '', amount);
                         }}
+                        isStaked={stakingStatus.isStaked}
+                        isStaking={stakingStatus.isStaking}
+                        error={stakingStatus.error}
+                        success={stakingStatus.success}
                       />
                 </GameInfoCard>
                 
