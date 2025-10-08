@@ -38,16 +38,18 @@ export class GasPriceService {
     try {
       // Try to get gas price from multiple sources
       const gasPricePromises = [
-        this.getGasPriceFromProvider(provider),
-        this.getGasPriceFromBSCScan(),
-        this.getGasPriceFromBSCGasStation(),
-        this.getGasPriceFromRabbyStyle()
+        this.getGasPriceFromProvider(provider).catch(() => null),
+        this.getGasPriceFromBSCScan().catch(() => null),
+        this.getGasPriceFromBSCGasStation().catch(() => null),
+        this.getGasPriceFromRabbyStyle().catch(() => null)
       ];
 
       const results = await Promise.allSettled(gasPricePromises);
       const successfulResults = results
-        .filter((result): result is PromiseFulfilledResult<GasPriceResult> => result.status === 'fulfilled')
-        .map(result => result.value);
+        .filter((result): result is PromiseFulfilledResult<GasPriceResult | null> => 
+          result.status === 'fulfilled' && result.value !== null
+        )
+        .map(result => result.value!);
 
       if (successfulResults.length === 0) {
         // Fallback to a reasonable gas price for BSC

@@ -38,6 +38,9 @@ export const useBNBTransactions = () => {
       // Get optimized gas price using Rabby-style fast gas pricing
       let gasPrice;
       try {
+        if (!signer.provider) {
+          throw new Error('No provider available');
+        }
         const gasPriceResult = await GasPriceService.getFastGasPrice(signer.provider);
         gasPrice = BigInt(gasPriceResult.gasPrice);
         console.log(`Using ${gasPriceResult.source} gas price: ${ethers.formatUnits(gasPrice, 'gwei')} gwei`);
@@ -91,6 +94,9 @@ export const useBNBTransactions = () => {
       // Get optimized gas price using Rabby-style fast gas pricing
       let gasPrice;
       try {
+        if (!signer.provider) {
+          throw new Error('No provider available');
+        }
         const gasPriceResult = await GasPriceService.getFastGasPrice(signer.provider);
         gasPrice = BigInt(gasPriceResult.gasPrice);
         console.log(`Using ${gasPriceResult.source} gas price: ${ethers.formatUnits(gasPrice, 'gwei')} gwei`);

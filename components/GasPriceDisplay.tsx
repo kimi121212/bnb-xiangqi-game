@@ -85,7 +85,7 @@ export const GasPriceDisplay: React.FC<GasPriceDisplayProps> = ({ onGasPriceSele
 
   const fetchGasPrices = async () => {
     if (!walletInfo.provider) {
-      setError('No wallet provider available');
+      // Don't show error, just don't display gas prices
       setLoading(false);
       return;
     }
@@ -155,7 +155,7 @@ export const GasPriceDisplay: React.FC<GasPriceDisplayProps> = ({ onGasPriceSele
     );
   }
 
-  if (!gasPrices) {
+  if (!gasPrices || !walletInfo.provider) {
     return null;
   }
 

@@ -487,6 +487,11 @@ export const useGameManager = () => {
       // Start background verification of the transaction
       setTimeout(async () => {
         try {
+          if (!walletInfo.provider) {
+            console.warn('No provider available for transaction verification');
+            return;
+          }
+          
           console.log(`Verifying transaction ${stakingResult.hash} on BSC...`);
           const receipt = await walletInfo.provider.getTransactionReceipt(stakingResult.hash);
           if (receipt && receipt.status === 1) {
