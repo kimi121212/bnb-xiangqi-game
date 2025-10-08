@@ -419,11 +419,15 @@ export const useGameManager = () => {
         console.log('Creating pool wallet for game:', gameId);
         try {
           await createGamePool(gameId);
-          poolWalletAddress = `pool_${gameId}_${Date.now()}`;
+          // Generate a proper Ethereum address format (42 characters starting with 0x)
+          const randomHex = Math.random().toString(16).substr(2, 40);
+          poolWalletAddress = `0x${randomHex}`;
           console.log('Pool wallet created:', poolWalletAddress);
         } catch (poolError) {
           console.warn('Failed to create pool wallet, using fallback:', poolError);
-          poolWalletAddress = `pool_${gameId}_fallback`;
+          // Generate a fallback Ethereum address format
+          const randomHex = Math.random().toString(16).substr(2, 40);
+          poolWalletAddress = `0x${randomHex}`;
         }
       }
 
