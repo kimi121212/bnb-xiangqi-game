@@ -4,7 +4,7 @@ import { useBNBPools } from './useBNBPools';
 import { simpleGameService } from '../services/SimpleGameService';
 import { XiangqiGame } from '../utils/xiangqiLogic';
 import { useBNBTransactions } from './useBNBTransactions';
-import { walletManager } from '../utils/WalletManager';
+import { clientWalletManager } from '../utils/ClientWalletManager';
 
 export interface GameData {
   id: string;
@@ -414,7 +414,7 @@ export const useGameManager = () => {
       }
 
       // Create or get game wallet
-      const gameWallet = walletManager.createGameWallet(gameId);
+      const gameWallet = clientWalletManager.createGameWallet(gameId);
       const poolWalletAddress = gameWallet.address;
       console.log('Using game wallet address:', poolWalletAddress);
 
@@ -532,7 +532,7 @@ export const useGameManager = () => {
 
       console.log(`Sending ${totalPool} BNB to winner ${winnerAddress} from game ${gameId}`);
       
-      const result = await walletManager.sendToWinner(gameId, winnerAddress, totalPool, walletInfo.provider, false); // false = mainnet
+      const result = await clientWalletManager.sendToWinner(gameId, winnerAddress, totalPool, walletInfo.provider);
       
       if (result.success) {
         console.log(`Successfully sent winnings to winner: ${result.hash}`);
@@ -553,7 +553,7 @@ export const useGameManager = () => {
     }
 
     try {
-      return await walletManager.getWalletBalance(gameId, walletInfo.provider, false); // false = mainnet
+      return await clientWalletManager.getWalletBalance(gameId, walletInfo.provider);
     } catch (error) {
       console.error('Error getting game wallet balance:', error);
       return 0;

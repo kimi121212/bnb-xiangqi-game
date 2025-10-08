@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { colors, spacing, borderRadius, shadows } from '../styles/theme';
+import { clientWalletManager } from '../utils/ClientWalletManager';
 
 const WalletContainer = styled.div`
   background: ${colors.background};
@@ -86,20 +87,19 @@ export const GameWalletInfo: React.FC<GameWalletInfoProps> = ({ gameId, onBalanc
       setError(null);
 
       console.log(`Fetching wallet info for game: ${gameId}`);
-      const response = await fetch(`/api/wallet/${gameId}`);
       
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(errorData.error || `HTTP ${response.status}: Failed to fetch wallet info`);
+      // Get or create wallet using client-side manager
+      let wallet = clientWalletManager.getGameWallet(gameId);
+      if (!wallet) {
+        wallet = clientWalletManager.createGameWallet(gameId);
       }
-
-      const data = await response.json();
-      console.log('Wallet info received:', data);
+      
+      console.log('Wallet info:', wallet);
       
       setWalletInfo({
-        address: data.address,
+        address: wallet.address,
         balance: 0, // This would be fetched from blockchain
-        createdAt: data.createdAt
+        createdAt: wallet.createdAt
       });
 
       if (onBalanceUpdate) {
