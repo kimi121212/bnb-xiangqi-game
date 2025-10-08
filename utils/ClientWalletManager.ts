@@ -135,13 +135,23 @@ export class ClientWalletManager {
         return 0;
       }
 
+      if (!provider) {
+        console.log('No provider available - returning 0 balance');
+        return 0;
+      }
+
       console.log(`Fetching balance for wallet ${wallet.address} on BSC...`);
       const balance = await provider.getBalance(wallet.address);
       const balanceInBNB = parseFloat(ethers.formatEther(balance));
       console.log(`✅ Wallet ${wallet.address} balance: ${balanceInBNB} BNB`);
       return balanceInBNB;
-    } catch (error) {
-      console.error('❌ Error getting wallet balance:', error);
+    } catch (error: any) {
+      // Don't log as error if it's just a network/provider issue
+      if (error.message?.includes('provider') || error.message?.includes('network')) {
+        console.log('Network issue - returning 0 balance:', error.message);
+      } else {
+        console.warn('Error getting wallet balance:', error.message);
+      }
       return 0;
     }
   }

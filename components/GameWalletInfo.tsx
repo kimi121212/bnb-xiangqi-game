@@ -114,11 +114,12 @@ export const GameWalletInfo: React.FC<GameWalletInfoProps> = ({ gameId, onBalanc
           realBalance = await clientWalletManager.getWalletBalance(gameId, userWallet.provider);
           console.log(`✅ Real BSC balance for ${wallet.address}: ${realBalance} BNB`);
         } catch (balanceError) {
-          console.error('❌ Could not fetch balance from BSC:', balanceError);
+          console.warn('Could not fetch balance from BSC (this is normal if wallet is not connected):', balanceError.message);
           realBalance = 0;
         }
       } else {
-        console.warn('No provider available for balance fetch');
+        // This is normal when wallet is not connected - don't log as error
+        console.log('Wallet not connected - showing 0 balance');
       }
       
       setWalletInfo({
