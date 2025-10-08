@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { serverGameService } from '../services/ServerGameService';
+import { simpleGameService } from '../services/SimpleGameService';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 
 const ConnectionStatus: React.FC = () => {
@@ -14,7 +14,7 @@ const ConnectionStatus: React.FC = () => {
 
       try {
         // Try to connect to server
-        await serverGameService.connect();
+        await simpleGameService.connect();
         setIsConnected(true);
         setIsConnecting(false);
         console.log('✅ Connected to game server');
@@ -30,7 +30,7 @@ const ConnectionStatus: React.FC = () => {
 
     // Check connection status periodically
     const interval = setInterval(() => {
-      const connected = serverGameService.isServerConnected();
+      const connected = true; // SimpleGameService is always connected
       setIsConnected(connected);
     }, 5000);
 

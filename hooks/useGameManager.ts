@@ -294,7 +294,17 @@ export const useGameManager = () => {
 
     setIsLoading(true);
     try {
-      return await serverGameService.joinPrivateGame(gameId, walletInfo.address, password);
+      // Use simple game service for private game joining
+      const game = simpleGameService.getGameById(gameId);
+      if (!game) {
+        throw new Error('Game not found');
+      }
+      
+      if (game.password !== password) {
+        throw new Error('Invalid password');
+      }
+      
+      return simpleGameService.joinGame(gameId, walletInfo.address);
     } catch (error) {
       console.error('Failed to join private game:', error);
       throw error;
@@ -305,7 +315,7 @@ export const useGameManager = () => {
 
   // Watch a game (spectator mode)
   const watchGame = useCallback(async (gameId: string) => {
-    const updatedGame = await serverGameService.watchGame(gameId);
+    const updatedGame = simpleGameService.getGameById(gameId);
     // Ensure the game has a game instance
     if (!updatedGame.gameInstance) {
       updatedGame.gameInstance = new XiangqiGame();
@@ -338,12 +348,12 @@ export const useGameManager = () => {
 
   // Get available games (non-private, waiting for players)
   const getAvailableGames = useCallback(async () => {
-    return await serverGameService.getAvailableGames();
+    return simpleGameService.getGames().filter(game => game.status === 'waiting' && !game.isPrivate);
   }, []);
 
   // Get active games (for spectators)
   const getActiveGames = useCallback(async () => {
-    return await serverGameService.getActiveGames();
+    return simpleGameService.getGames().filter(game => game.status === 'active');
   }, []);
 
   // Get user's games
@@ -474,12 +484,12 @@ export const useGameManager = () => {
 
       // Update server with new pool amount and players
       console.log(`Updating server pool amount: ${newPoolAmount} BNB for game ${gameId}`);
-      await serverGameService.updatePoolAmount(gameId, newPoolAmount);
+      simpleGameService.updatePoolAmount(gameId, newPoolAmount, walletInfo.address);
       
       // Check if game is ready to start (2 stakes total, allows same wallet)
       if (newStakeCount >= 2) {
         console.log('Game ready to start - 2 stakes completed');
-        await serverGameService.updateGameStatus(gameId, 'active');
+        simpleGameService.updateGameStatus(gameId, 'active');
         setGames(prevGames => 
           prevGames.map(g => 
             g.id === gameId ? { ...g, status: 'active' } : g
@@ -653,7 +663,7 @@ export const useGameManager = () => {
       const txHashes = await refundAllPlayers(gameId, game.players);
       
       // Update game status on server
-      serverGameService.updateGameStatus(gameId, 'finished');
+      simpleGameService.updateGameStatus(gameId, 'finished');
       
       console.log(`Game ${gameId} ended with refunds:`, txHashes);
       return { success: true, txHashes };
