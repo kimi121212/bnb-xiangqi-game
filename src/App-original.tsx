@@ -47,11 +47,6 @@ const AppContainer = styled.div`
   padding: ${spacing.lg};
 `;
 
-const Header = styled.header`
-  text-align: center;
-  margin-bottom: ${spacing.xxl};
-`;
-
 const Logo = styled(motion.div)`
   display: flex;
   align-items: center;
