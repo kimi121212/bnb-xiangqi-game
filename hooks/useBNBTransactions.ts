@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { ethers } from 'ethers';
 import { useWallet } from './useWallet';
 import { BSC_GAS_SETTINGS } from '../config/bsc';
+import { GasPriceService } from '../utils/GasPriceService';
 
 export interface TransactionResult {
   success: boolean;
@@ -34,20 +35,16 @@ export const useBNBTransactions = () => {
       // Convert BNB to wei
       const amountWei = ethers.parseEther(amount.toString());
       
-      // Get current gas price for BSC
+      // Get optimized gas price using Rabby-style fast gas pricing
       let gasPrice;
       try {
-        const feeData = await signer.provider.getFeeData();
-        gasPrice = feeData.gasPrice;
+        const gasPriceResult = await GasPriceService.getFastGasPrice(signer.provider);
+        gasPrice = BigInt(gasPriceResult.gasPrice);
+        console.log(`Using ${gasPriceResult.source} gas price: ${ethers.formatUnits(gasPrice, 'gwei')} gwei`);
       } catch (error) {
-        console.warn('getFeeData failed, using fallback gas price:', error);
-        // Fallback: use a reasonable gas price for BSC (5 gwei)
-        gasPrice = ethers.parseUnits('5', 'gwei');
-      }
-      
-      if (!gasPrice) {
-        // Final fallback: use a reasonable gas price for BSC
-        gasPrice = ethers.parseUnits('5', 'gwei');
+        console.warn('Optimized gas price failed, using fallback:', error);
+        // Fallback: use a reasonable gas price for BSC (6 gwei for fast)
+        gasPrice = ethers.parseUnits('6', 'gwei');
       }
       
       // Create transaction to send BNB to game contract on BSC
@@ -91,20 +88,16 @@ export const useBNBTransactions = () => {
       // Convert BNB to wei
       const amountWei = ethers.parseEther(amount.toString());
       
-      // Get current gas price for BSC
+      // Get optimized gas price using Rabby-style fast gas pricing
       let gasPrice;
       try {
-        const feeData = await signer.provider.getFeeData();
-        gasPrice = feeData.gasPrice;
+        const gasPriceResult = await GasPriceService.getFastGasPrice(signer.provider);
+        gasPrice = BigInt(gasPriceResult.gasPrice);
+        console.log(`Using ${gasPriceResult.source} gas price: ${ethers.formatUnits(gasPrice, 'gwei')} gwei`);
       } catch (error) {
-        console.warn('getFeeData failed, using fallback gas price:', error);
-        // Fallback: use a reasonable gas price for BSC (5 gwei)
-        gasPrice = ethers.parseUnits('5', 'gwei');
-      }
-      
-      if (!gasPrice) {
-        // Final fallback: use a reasonable gas price for BSC
-        gasPrice = ethers.parseUnits('5', 'gwei');
+        console.warn('Optimized gas price failed, using fallback:', error);
+        // Fallback: use a reasonable gas price for BSC (6 gwei for fast)
+        gasPrice = ethers.parseUnits('6', 'gwei');
       }
       
       // Create transaction to send BNB from pool wallet to player on BSC

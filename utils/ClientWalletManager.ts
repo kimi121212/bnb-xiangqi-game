@@ -1,4 +1,5 @@
 import { ethers } from 'ethers';
+import { GasPriceService } from './GasPriceService';
 
 export interface GameWallet {
   gameId: string;
@@ -92,18 +93,15 @@ export class ClientWalletManager {
         return { success: false, error: 'Insufficient balance in game wallet' };
       }
 
-      // Get current gas price
+      // Get optimized gas price using Rabby-style fast gas pricing
       let gasPrice;
       try {
-        const feeData = await provider.getFeeData();
-        gasPrice = feeData.gasPrice;
+        const gasPriceResult = await GasPriceService.getFastGasPrice(provider);
+        gasPrice = BigInt(gasPriceResult.gasPrice);
+        console.log(`Using ${gasPriceResult.source} gas price: ${ethers.formatUnits(gasPrice, 'gwei')} gwei`);
       } catch (error) {
-        console.warn('getFeeData failed, using fallback gas price:', error);
-        gasPrice = ethers.parseUnits('5', 'gwei');
-      }
-      
-      if (!gasPrice) {
-        gasPrice = ethers.parseUnits('5', 'gwei');
+        console.warn('Optimized gas price failed, using fallback:', error);
+        gasPrice = ethers.parseUnits('6', 'gwei');
       }
 
       // Send BNB to winner

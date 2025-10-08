@@ -6,6 +6,7 @@ import { useWallet } from '../hooks/useWallet';
 import { colors, gradients, shadows, borderRadius, spacing, typography } from '../styles/theme';
 import StakingError from './StakingError';
 import GameWalletInfo from './GameWalletInfo';
+import GasPriceDisplay from './GasPriceDisplay';
 
 const StakingContainer = styled.div`
   display: flex;
@@ -286,6 +287,8 @@ const GameStaking: React.FC<GameStakingProps> = ({
           // The GameWalletInfo component will handle the actual balance fetch
         }}
       />
+
+      <GasPriceDisplay />
 
       <StakeInfo>
         <InfoCard>
