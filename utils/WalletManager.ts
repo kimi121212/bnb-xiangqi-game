@@ -132,7 +132,20 @@ export class WalletManager {
       }
 
       // Get current gas price for BSC
-      const gasPrice = await bscProvider.getGasPrice();
+      let gasPrice;
+      try {
+        const feeData = await bscProvider.getFeeData();
+        gasPrice = feeData.gasPrice;
+      } catch (error) {
+        console.warn('getFeeData failed, using fallback gas price:', error);
+        // Fallback: use a reasonable gas price for BSC (5 gwei)
+        gasPrice = ethers.parseUnits('5', 'gwei');
+      }
+      
+      if (!gasPrice) {
+        // Final fallback: use a reasonable gas price for BSC
+        gasPrice = ethers.parseUnits('5', 'gwei');
+      }
       
       // Send BNB to winner on BSC
       const tx = await signer.sendTransaction({

@@ -35,7 +35,20 @@ export const useBNBTransactions = () => {
       const amountWei = ethers.parseEther(amount.toString());
       
       // Get current gas price for BSC
-      const gasPrice = await signer.provider.getGasPrice();
+      let gasPrice;
+      try {
+        const feeData = await signer.provider.getFeeData();
+        gasPrice = feeData.gasPrice;
+      } catch (error) {
+        console.warn('getFeeData failed, using fallback gas price:', error);
+        // Fallback: use a reasonable gas price for BSC (5 gwei)
+        gasPrice = ethers.parseUnits('5', 'gwei');
+      }
+      
+      if (!gasPrice) {
+        // Final fallback: use a reasonable gas price for BSC
+        gasPrice = ethers.parseUnits('5', 'gwei');
+      }
       
       // Create transaction to send BNB to game contract on BSC
       const tx = await signer.sendTransaction({
@@ -79,7 +92,20 @@ export const useBNBTransactions = () => {
       const amountWei = ethers.parseEther(amount.toString());
       
       // Get current gas price for BSC
-      const gasPrice = await signer.provider.getGasPrice();
+      let gasPrice;
+      try {
+        const feeData = await signer.provider.getFeeData();
+        gasPrice = feeData.gasPrice;
+      } catch (error) {
+        console.warn('getFeeData failed, using fallback gas price:', error);
+        // Fallback: use a reasonable gas price for BSC (5 gwei)
+        gasPrice = ethers.parseUnits('5', 'gwei');
+      }
+      
+      if (!gasPrice) {
+        // Final fallback: use a reasonable gas price for BSC
+        gasPrice = ethers.parseUnits('5', 'gwei');
+      }
       
       // Create transaction to send BNB from pool wallet to player on BSC
       const tx = await signer.sendTransaction({
