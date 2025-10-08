@@ -92,13 +92,24 @@ export const useGameManager = () => {
         }
 
         // Subscribe to game updates with live data refresh
-        unsubscribe = serverGameService.subscribe((updatedGames) => {
-          setGames(updatedGames);
-          console.log('Games updated from server:', updatedGames.length);
+        unsubscribe = serverGameService.subscribe(async (updatedGames) => {
+          // Ensure all games have gameInstance
+          const gamesWithInstances = await Promise.all(
+            updatedGames.map(async (game) => {
+              if (!game.gameInstance) {
+                const { XiangqiGame } = await import('../utils/xiangqiLogic');
+                game.gameInstance = new XiangqiGame();
+              }
+              return game;
+            })
+          );
+          
+          setGames(gamesWithInstances);
+          console.log('Games updated from server:', gamesWithInstances.length);
           
           // Update current game if it's in the updated games
           if (currentGame) {
-            const updatedCurrentGame = updatedGames.find(g => g.id === currentGame.id);
+            const updatedCurrentGame = gamesWithInstances.find(g => g.id === currentGame.id);
             if (updatedCurrentGame) {
               setCurrentGame(updatedCurrentGame);
               console.log('Current game updated with live data');
@@ -108,7 +119,17 @@ export const useGameManager = () => {
 
         // Load initial games
         const initialGames = await serverGameService.getAllGames();
-        setGames(initialGames);
+        // Ensure all initial games have gameInstance
+        const initialGamesWithInstances = await Promise.all(
+          initialGames.map(async (game) => {
+            if (!game.gameInstance) {
+              const { XiangqiGame } = await import('../utils/xiangqiLogic');
+              game.gameInstance = new XiangqiGame();
+            }
+            return game;
+          })
+        );
+        setGames(initialGamesWithInstances);
 
       } catch (error) {
         console.error('Failed to connect to game server:', error);
