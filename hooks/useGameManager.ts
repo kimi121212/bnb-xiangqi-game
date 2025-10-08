@@ -532,7 +532,7 @@ export const useGameManager = () => {
 
       console.log(`Sending ${totalPool} BNB to winner ${winnerAddress} from game ${gameId}`);
       
-      const result = await walletManager.sendToWinner(gameId, winnerAddress, totalPool, walletInfo.provider);
+      const result = await walletManager.sendToWinner(gameId, winnerAddress, totalPool, walletInfo.provider, false); // false = mainnet
       
       if (result.success) {
         console.log(`Successfully sent winnings to winner: ${result.hash}`);
@@ -553,7 +553,7 @@ export const useGameManager = () => {
     }
 
     try {
-      return await walletManager.getWalletBalance(gameId, walletInfo.provider);
+      return await walletManager.getWalletBalance(gameId, walletInfo.provider, false); // false = mainnet
     } catch (error) {
       console.error('Error getting game wallet balance:', error);
       return 0;

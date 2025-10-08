@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { ethers } from 'ethers';
 import { useWallet } from './useWallet';
+import { BSC_GAS_SETTINGS } from '../config/bsc';
 
 export interface TransactionResult {
   success: boolean;
@@ -33,11 +34,15 @@ export const useBNBTransactions = () => {
       // Convert BNB to wei
       const amountWei = ethers.parseEther(amount.toString());
       
-      // Create transaction to send BNB to game contract
+      // Get current gas price for BSC
+      const gasPrice = await signer.provider.getGasPrice();
+      
+      // Create transaction to send BNB to game contract on BSC
       const tx = await signer.sendTransaction({
         to: gameContractAddress,
         value: amountWei,
-        gasLimit: 21000, // Standard BNB transfer gas limit
+        gasLimit: BSC_GAS_SETTINGS.TRANSFER_GAS_LIMIT,
+        gasPrice: gasPrice
       });
 
       // Wait for transaction confirmation
@@ -73,11 +78,15 @@ export const useBNBTransactions = () => {
       // Convert BNB to wei
       const amountWei = ethers.parseEther(amount.toString());
       
-      // Create transaction to send BNB from pool wallet to player
+      // Get current gas price for BSC
+      const gasPrice = await signer.provider.getGasPrice();
+      
+      // Create transaction to send BNB from pool wallet to player on BSC
       const tx = await signer.sendTransaction({
         to: toAddress,
         value: amountWei,
-        gasLimit: 21000, // Standard BNB transfer gas limit
+        gasLimit: BSC_GAS_SETTINGS.TRANSFER_GAS_LIMIT,
+        gasPrice: gasPrice
       });
 
       // Wait for transaction confirmation

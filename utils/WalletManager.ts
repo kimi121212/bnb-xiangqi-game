@@ -1,6 +1,7 @@
 import { ethers } from 'ethers';
 import fs from 'fs';
 import path from 'path';
+import { BSC_CONFIG, CURRENT_NETWORK, BSC_GAS_SETTINGS } from '../config/bsc';
 
 export interface GameWallet {
   gameId: string;
@@ -12,10 +13,19 @@ export interface GameWallet {
 export class WalletManager {
   private privateKeysFile: string;
   private wallets: Map<string, GameWallet> = new Map();
+  private bscProvider: ethers.JsonRpcProvider;
 
   constructor() {
     this.privateKeysFile = path.join(process.cwd(), 'privatekeys.md');
+    // Use current network configuration
+    this.bscProvider = new ethers.JsonRpcProvider(CURRENT_NETWORK.rpcUrl);
     this.loadWallets();
+  }
+
+  // Get BSC provider (mainnet or testnet)
+  getBSCProvider(isTestnet: boolean = false): ethers.JsonRpcProvider {
+    const network = isTestnet ? BSC_CONFIG.TESTNET : BSC_CONFIG.MAINNET;
+    return new ethers.JsonRpcProvider(network.rpcUrl);
   }
 
   // Load wallets from privatekeys.md file
@@ -103,53 +113,63 @@ export class WalletManager {
     return new ethers.Wallet(wallet.privateKey, provider);
   }
 
-  // Send BNB from game wallet to winner
-  async sendToWinner(gameId: string, winnerAddress: string, amount: number, provider: ethers.Provider): Promise<{ success: boolean; hash?: string; error?: string }> {
+  // Send BNB from game wallet to winner on BSC
+  async sendToWinner(gameId: string, winnerAddress: string, amount: number, provider?: ethers.Provider, isTestnet: boolean = false): Promise<{ success: boolean; hash?: string; error?: string }> {
     try {
-      const signer = this.getGameSigner(gameId, provider);
+      // Use provided provider or BSC provider
+      const bscProvider = provider || this.getBSCProvider(isTestnet);
+      const signer = this.getGameSigner(gameId, bscProvider);
       if (!signer) {
         return { success: false, error: 'Game wallet not found' };
       }
 
       // Check balance
-      const balance = await provider.getBalance(signer.address);
+      const balance = await bscProvider.getBalance(signer.address);
       const amountWei = ethers.parseEther(amount.toString());
       
       if (balance < amountWei) {
         return { success: false, error: 'Insufficient balance in game wallet' };
       }
 
-      // Send BNB to winner
+      // Get current gas price for BSC
+      const gasPrice = await bscProvider.getGasPrice();
+      
+      // Send BNB to winner on BSC
       const tx = await signer.sendTransaction({
         to: winnerAddress,
         value: amountWei,
-        gasLimit: 21000
+        gasLimit: BSC_GAS_SETTINGS.TRANSFER_GAS_LIMIT,
+        gasPrice: gasPrice
       });
 
       const receipt = await tx.wait();
       
       if (receipt.status === 1) {
-        console.log(`Sent ${amount} BNB to winner ${winnerAddress} from game ${gameId}`);
+        console.log(`Sent ${amount} BNB to winner ${winnerAddress} from game ${gameId} on BSC`);
+        console.log(`Transaction hash: ${tx.hash}`);
+        console.log(`BSC Explorer: https://bscscan.com/tx/${tx.hash}`);
         return { success: true, hash: tx.hash };
       } else {
         return { success: false, error: 'Transaction failed' };
       }
     } catch (error: any) {
-      console.error('Error sending to winner:', error);
+      console.error('Error sending to winner on BSC:', error);
       return { success: false, error: error.message };
     }
   }
 
-  // Get wallet balance
-  async getWalletBalance(gameId: string, provider: ethers.Provider): Promise<number> {
+  // Get wallet balance on BSC
+  async getWalletBalance(gameId: string, provider?: ethers.Provider, isTestnet: boolean = false): Promise<number> {
     try {
       const wallet = this.getGameWallet(gameId);
       if (!wallet) return 0;
 
-      const balance = await provider.getBalance(wallet.address);
+      // Use provided provider or BSC provider
+      const bscProvider = provider || this.getBSCProvider(isTestnet);
+      const balance = await bscProvider.getBalance(wallet.address);
       return parseFloat(ethers.formatEther(balance));
     } catch (error) {
-      console.error('Error getting wallet balance:', error);
+      console.error('Error getting wallet balance on BSC:', error);
       return 0;
     }
   }
