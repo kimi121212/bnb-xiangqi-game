@@ -1,43 +1,32 @@
 {
   "name": "bnb-xiangqi-game",
   "version": "1.0.0",
-  "description": "BNB Staking Xiangqi Game - Full Stack",
-  "main": "server/server.js",
+  "description": "BNB Staking Xiangqi Game - Next.js Full Stack",
+  "private": true,
   "scripts": {
-    "start": "node server/server.js",
-    "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "server": "cd server && npm start",
-    "client": "cd . && npm run dev",
-    "build": "npm run build:client",
-    "build:client": "vite build",
-    "install:all": "npm install && cd server && npm install",
-    "postinstall": "npm run build:client",
-    "vercel-build": "npm run build:client"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "socket.io": "^4.7.4",
-    "cors": "^2.8.5",
-    "uuid": "^9.0.1",
-    "dotenv": "^16.3.1",
-    "helmet": "^7.1.0",
-    "express-rate-limit": "^7.1.5",
-    "ethers": "^6.11.1",
+    "next": "^14.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-hot-toast": "^2.4.1",
+    "ethers": "^6.11.1",
+    "uuid": "^9.0.1",
     "styled-components": "^6.1.6",
     "framer-motion": "^10.16.16",
-    "socket.io-client": "^4.7.4",
-    "lucide-react": "^0.294.0"
+    "lucide-react": "^0.294.0",
+    "react-hot-toast": "^2.4.1"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2",
-    "vite": "^4.5.14",
-    "@vitejs/plugin-react": "^4.2.1",
-    "@types/react": "^18.2.43",
-    "@types/react-dom": "^18.2.17",
-    "typescript": "^5.3.3"
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "typescript": "^5.3.3",
+    "eslint": "^8.0.0",
+    "eslint-config-next": "^14.0.0"
   },
   "engines": {
     "node": ">=18.0.0"
