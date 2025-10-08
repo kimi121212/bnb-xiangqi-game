@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useWallet } from './useWallet';
 import { useBNBPools } from './useBNBPools';
-import { serverGameService } from '../services/ServerGameService';
+import { simpleGameService } from '../services/SimpleGameService';
 import { XiangqiGame } from '../utils/xiangqiLogic';
 import { useBNBTransactions } from './useBNBTransactions';
 
@@ -82,54 +82,24 @@ export const useGameManager = () => {
 
     const initializeServer = async () => {
       try {
-        // Connect to server
-        await serverGameService.connect();
-        console.log('Connected to game server');
+        // Connect to simple game service
+        await simpleGameService.connect();
+        console.log('Connected to simple game service');
 
-        // Join as player if wallet is connected
-        if (walletInfo.isConnected) {
-          serverGameService.joinAsPlayer(walletInfo.address);
-        }
-
-        // Subscribe to game updates with live data refresh
-        unsubscribe = serverGameService.subscribe(async (updatedGames) => {
-          // Ensure all games have gameInstance
-          const gamesWithInstances = await Promise.all(
-            updatedGames.map(async (game) => {
-              if (!game.gameInstance) {
-                const { XiangqiGame } = await import('../utils/xiangqiLogic');
-                game.gameInstance = new XiangqiGame();
-              }
-              return game;
-            })
-          );
-          
-          setGames(gamesWithInstances);
-          console.log('Games updated from server:', gamesWithInstances.length);
+        // Subscribe to game updates
+        unsubscribe = simpleGameService.subscribe((updatedGames) => {
+          setGames(updatedGames);
+          console.log('Games updated:', updatedGames.length);
           
           // Update current game if it's in the updated games
           if (currentGame) {
-            const updatedCurrentGame = gamesWithInstances.find(g => g.id === currentGame.id);
+            const updatedCurrentGame = updatedGames.find(g => g.id === currentGame.id);
             if (updatedCurrentGame) {
               setCurrentGame(updatedCurrentGame);
-              console.log('Current game updated with live data');
+              console.log('Current game updated');
             }
           }
         });
-
-        // Load initial games
-        const initialGames = await serverGameService.getAllGames();
-        // Ensure all initial games have gameInstance
-        const initialGamesWithInstances = await Promise.all(
-          initialGames.map(async (game) => {
-            if (!game.gameInstance) {
-              const { XiangqiGame } = await import('../utils/xiangqiLogic');
-              game.gameInstance = new XiangqiGame();
-            }
-            return game;
-          })
-        );
-        setGames(initialGamesWithInstances);
 
       } catch (error) {
         console.error('Failed to connect to game server:', error);
@@ -145,36 +115,11 @@ export const useGameManager = () => {
       if (unsubscribe) {
         unsubscribe();
       }
-      serverGameService.disconnect();
+      simpleGameService.disconnect();
     };
   }, [walletInfo.isConnected, walletInfo.address]);
 
-  // Periodic refresh of games to ensure synchronization
-  useEffect(() => {
-    const refreshInterval = setInterval(async () => {
-      try {
-        const serverGames = await serverGameService.getGames();
-        if (serverGames.length > 0) {
-          // Ensure all games have gameInstance
-          const gamesWithInstances = await Promise.all(
-            serverGames.map(async (game) => {
-              if (!game.gameInstance) {
-                const { XiangqiGame } = await import('../utils/xiangqiLogic');
-                game.gameInstance = new XiangqiGame();
-              }
-              return game;
-            })
-          );
-          setGames(gamesWithInstances);
-          console.log('Games refreshed from server:', gamesWithInstances.length);
-        }
-      } catch (error) {
-        console.error('Error refreshing games:', error);
-      }
-    }, 10000); // Refresh every 10 seconds
-
-    return () => clearInterval(refreshInterval);
-  }, []);
+  // No need for periodic refresh with simple service - it's already real-time
 
   // Update staking status when current game changes - SIMPLIFIED APPROACH
   useEffect(() => {
@@ -260,36 +205,21 @@ export const useGameManager = () => {
         gameInstance: new XiangqiGame() // Add the game instance
       };
 
-      // Try to create game on server, fallback to local if server unavailable
-      try {
-        const serverGame = await serverGameService.createGame({
-          title: newGame.title,
-          stakeAmount: newGame.stakeAmount,
-          isPrivate: newGame.isPrivate,
-          password: newGame.password,
-          maxPlayers: newGame.maxPlayers,
-          host: newGame.host
-        });
-        
-        // Ensure the server game has a game instance
-        if (!serverGame.gameInstance) {
-          serverGame.gameInstance = newGame.gameInstance;
-        }
-        
-        setCurrentGame(serverGame);
-        // Reset staking status for new game
-        setStakingStatus(prev => ({ ...prev, isStaked: false, isStaking: false, isUnstaking: false, error: undefined, success: undefined }));
-        console.log('Game created on server:', serverGame.id);
-        return serverGame;
-      } catch (serverError) {
-        console.warn('Server unavailable, creating local game:', serverError);
-        // Fallback to local game creation
-        setCurrentGame(newGame);
-        // Reset staking status for new game
-        setStakingStatus(prev => ({ ...prev, isStaked: false, isStaking: false, isUnstaking: false, error: undefined, success: undefined }));
-        console.log('Game created locally:', newGame.id);
-        return newGame;
-      }
+      // Create game using simple service
+      const createdGame = simpleGameService.createGame({
+        title: newGame.title,
+        stakeAmount: newGame.stakeAmount,
+        isPrivate: newGame.isPrivate,
+        password: newGame.password,
+        maxPlayers: newGame.maxPlayers,
+        host: newGame.host
+      });
+      
+      setCurrentGame(createdGame);
+      // Reset staking status for new game
+      setStakingStatus(prev => ({ ...prev, isStaked: false, isStaking: false, isUnstaking: false, error: undefined, success: undefined }));
+      console.log('Game created:', createdGame.id);
+      return createdGame;
     } catch (error: any) {
       console.error('Failed to create game:', error);
       const errorMessage = error.message || 'Failed to create game';
@@ -342,34 +272,10 @@ export const useGameManager = () => {
 
       console.log('Joining game:', gameId, 'with stake:', stakeAmount);
       
-      // Join game through server
-      let updatedGame;
-      try {
-        updatedGame = await serverGameService.joinGame(gameId, walletInfo.address);
-        console.log('Successfully joined game via server:', updatedGame.id);
-      } catch (serverError) {
-        console.error('Server join failed, trying local join:', serverError);
-        // If server join fails, try to join locally
-        updatedGame = game;
-        console.log('Using local game for re-entry');
-      }
-      // Ensure the game has a game instance
-      if (!updatedGame.gameInstance) {
-        updatedGame.gameInstance = new XiangqiGame();
-      }
-      
-      // Update local games state
-      setGames(prevGames => 
-        prevGames.map(g => 
-          g.id === gameId 
-            ? { ...g, players: [...g.players, walletInfo.address] }
-            : g
-        )
-      );
-      
+      // Join game using simple service
+      const updatedGame = simpleGameService.joinGame(gameId, walletInfo.address);
       setCurrentGame(updatedGame);
       console.log('Successfully joined game:', updatedGame.id);
-      
       return updatedGame;
     } catch (error) {
       console.error('Failed to join game:', error);
@@ -489,26 +395,10 @@ export const useGameManager = () => {
     try {
       console.log(`Staking ${amount} BNB for game ${gameId}`);
       
-      // Get current game state - try local first, then fetch from server
-      let game = games.find(g => g.id === gameId);
+      // Get current game state from simple service
+      const game = simpleGameService.getGameById(gameId);
       if (!game) {
-        console.log('Game not found locally, fetching from server...');
-        try {
-          const serverGames = await serverGameService.getGames();
-          game = serverGames.find(g => g.id === gameId);
-          if (!game) {
-            throw new Error('Game not found on server');
-          }
-          // Add gameInstance if missing
-          if (!game.gameInstance) {
-            const { XiangqiGame } = await import('../utils/xiangqiLogic');
-            game.gameInstance = new XiangqiGame();
-          }
-          console.log('Game found on server:', game);
-        } catch (error) {
-          console.error('Error fetching game from server:', error);
-          throw new Error('Game not found');
-        }
+        throw new Error('Game not found');
       }
 
       // For multi-browser support, allow same wallet to stake multiple times
