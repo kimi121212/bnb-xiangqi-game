@@ -412,11 +412,47 @@ export const useGameManager = () => {
     try {
       console.log(`Staking ${amount} BNB for game ${gameId}`);
       
-      // Get current game state from server service
-      const allGames = await serverGameService.getGames();
-      const game = allGames.find(g => g.id === gameId);
+      // Refresh games list to ensure we have latest state
+      try {
+        const refreshedGames = await serverGameService.getGames();
+        setGames(refreshedGames);
+        console.log('Refreshed games list:', refreshedGames.length, 'games');
+      } catch (refreshError) {
+        console.warn('Failed to refresh games list:', refreshError);
+      }
+      
+      // Get current game state from server service with fallback
+      let game = null;
+      try {
+        const allGames = await serverGameService.getGames();
+        game = allGames.find(g => g.id === gameId);
+        console.log('Game lookup from server:', game ? 'Found' : 'Not found');
+      } catch (serverError) {
+        console.warn('Server game lookup failed, trying local games:', serverError);
+        // Fallback to local games
+        game = games.find(g => g.id === gameId);
+        console.log('Game lookup from local:', game ? 'Found' : 'Not found');
+      }
+      
       if (!game) {
-        throw new Error('Game not found');
+        console.error('Game not found in both server and local state:', gameId);
+        console.log('Available games:', games.map(g => ({ id: g.id, title: g.title })));
+        
+        // Try one more time with a fresh server call
+        try {
+          console.log('Attempting final server lookup...');
+          const finalGames = await serverGameService.getGames();
+          game = finalGames.find(g => g.id === gameId);
+          if (game) {
+            console.log('Game found on final attempt');
+          }
+        } catch (finalError) {
+          console.error('Final lookup failed:', finalError);
+        }
+        
+        if (!game) {
+          throw new Error(`Game not found: ${gameId}. Please refresh the page and try again.`);
+        }
       }
 
       // For multi-browser support, allow same wallet to stake multiple times
@@ -488,6 +524,16 @@ export const useGameManager = () => {
           status: newStakeCount >= 2 ? 'active' : 'waiting'
         };
         setCurrentGame(updatedCurrentGame);
+      } else if (!currentGame) {
+        // If no current game is set, set it to the game we just staked in
+        console.log('Setting current game to staked game:', gameId);
+        setCurrentGame({
+          ...game,
+          poolAmount: newPoolAmount,
+          stakeCount: newStakeCount,
+          players: newPlayers,
+          status: newStakeCount >= 2 ? 'active' : 'waiting'
+        });
       }
 
       // Start background verification of the transaction
