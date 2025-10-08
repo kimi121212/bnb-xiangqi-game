@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useWallet } from './useWallet';
 import { useBNBPools } from './useBNBPools';
-import { simpleGameService } from '../services/SimpleGameService';
+import { serverGameService } from '../services/ServerGameService';
 import { XiangqiGame } from '../utils/xiangqiLogic';
 import { useBNBTransactions } from './useBNBTransactions';
 import { clientWalletManager } from '../utils/ClientWalletManager';
@@ -50,19 +50,7 @@ export const useGameManager = () => {
     error: poolError
   } = useBNBPools();
   const [games, setGames] = useState<GameData[]>([]);
-  const [currentGame, setCurrentGame] = useState<GameData | null>(() => {
-    // Restore current game from localStorage on page load
-    if (typeof window !== 'undefined') {
-      try {
-        const savedGame = localStorage.getItem('bnb-xiangqi-current-game');
-        return savedGame ? JSON.parse(savedGame) : null;
-      } catch (error) {
-        console.error('Error loading current game from localStorage:', error);
-        return null;
-      }
-    }
-    return null;
-  });
+  const [currentGame, setCurrentGame] = useState<GameData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [stakingStatus, setStakingStatus] = useState<{
     isStaked: boolean;
@@ -76,20 +64,6 @@ export const useGameManager = () => {
     isUnstaking: false
   });
 
-  // Save current game to localStorage
-  const saveCurrentGame = useCallback((game: GameData | null) => {
-    if (typeof window !== 'undefined') {
-      try {
-        if (game) {
-          localStorage.setItem('bnb-xiangqi-current-game', JSON.stringify(game));
-        } else {
-          localStorage.removeItem('bnb-xiangqi-current-game');
-        }
-      } catch (error) {
-        console.error('Error saving current game to localStorage:', error);
-      }
-    }
-  }, []);
 
   // Check if current player has staked in the current game
   const checkPlayerStaked = useCallback(async (gameId: string) => {
@@ -110,12 +84,17 @@ export const useGameManager = () => {
 
     const initializeServer = async () => {
       try {
-        // Connect to simple game service
-        await simpleGameService.connect();
-        console.log('Connected to simple game service');
+        // Connect to server game service
+        await serverGameService.connect();
+        console.log('Connected to server game service');
+
+        // Load initial games from server
+        const initialGames = await serverGameService.getGames();
+        setGames(initialGames);
+        console.log('Loaded games from server:', initialGames.length);
 
         // Subscribe to game updates
-        unsubscribe = simpleGameService.subscribe((updatedGames) => {
+        unsubscribe = serverGameService.subscribe((updatedGames) => {
           setGames(updatedGames);
           console.log('Games updated:', updatedGames.length);
           
@@ -143,7 +122,7 @@ export const useGameManager = () => {
       if (unsubscribe) {
         unsubscribe();
       }
-      simpleGameService.disconnect();
+      serverGameService.disconnect();
     };
   }, [walletInfo.isConnected, walletInfo.address]);
 
@@ -233,8 +212,8 @@ export const useGameManager = () => {
         gameInstance: new XiangqiGame() // Add the game instance
       };
 
-      // Create game using simple service
-      const createdGame = simpleGameService.createGame({
+      // Create game using server service
+      const createdGame = await serverGameService.createGame({
         title: newGame.title,
         stakeAmount: newGame.stakeAmount,
         isPrivate: newGame.isPrivate,
@@ -244,7 +223,6 @@ export const useGameManager = () => {
       });
       
       setCurrentGame(createdGame);
-      saveCurrentGame(createdGame); // Save to localStorage
       // Reset staking status for new game
       setStakingStatus(prev => ({ ...prev, isStaked: false, isStaking: false, isUnstaking: false, error: undefined, success: undefined }));
       console.log('Game created:', createdGame.id);
@@ -284,7 +262,6 @@ export const useGameManager = () => {
           updatedGame.gameInstance = new XiangqiGame();
         }
         setCurrentGame(updatedGame);
-        saveCurrentGame(updatedGame); // Save to localStorage
         console.log('Successfully rejoined game:', updatedGame.id);
         return updatedGame;
       }
@@ -302,10 +279,9 @@ export const useGameManager = () => {
 
       console.log('Joining game:', gameId, 'with stake:', stakeAmount);
       
-      // Join game using simple service
-      const updatedGame = simpleGameService.joinGame(gameId, walletInfo.address);
+      // Join game using server service
+      const updatedGame = await serverGameService.joinGame(gameId, walletInfo.address);
       setCurrentGame(updatedGame);
-      saveCurrentGame(updatedGame); // Save to localStorage
       console.log('Successfully joined game:', updatedGame.id);
       return updatedGame;
     } catch (error) {
@@ -436,8 +412,9 @@ export const useGameManager = () => {
     try {
       console.log(`Staking ${amount} BNB for game ${gameId}`);
       
-      // Get current game state from simple service
-      const game = simpleGameService.getGameById(gameId);
+      // Get current game state from server service
+      const allGames = await serverGameService.getGames();
+      const game = allGames.find(g => g.id === gameId);
       if (!game) {
         throw new Error('Game not found');
       }
@@ -511,7 +488,6 @@ export const useGameManager = () => {
           status: newStakeCount >= 2 ? 'active' : 'waiting'
         };
         setCurrentGame(updatedCurrentGame);
-        saveCurrentGame(updatedCurrentGame); // Save to localStorage
       }
 
       // Start background verification of the transaction
@@ -536,12 +512,12 @@ export const useGameManager = () => {
 
       // Update server with new pool amount and players
       console.log(`Updating server pool amount: ${newPoolAmount} BNB for game ${gameId}`);
-      simpleGameService.updatePoolAmount(gameId, newPoolAmount, walletInfo.address);
+      await serverGameService.updatePoolAmount(gameId, newPoolAmount);
       
       // Check if game is ready to start (2 stakes total, allows same wallet)
       if (newStakeCount >= 2) {
         console.log('Game ready to start - 2 stakes completed');
-        simpleGameService.updateGameStatus(gameId, 'active');
+        await serverGameService.updateGameStatus(gameId, 'active');
         setGames(prevGames => 
           prevGames.map(g => 
             g.id === gameId ? { ...g, status: 'active' } : g
@@ -630,7 +606,8 @@ export const useGameManager = () => {
     }
 
     try {
-      const game = simpleGameService.getGameById(gameId);
+      const allGames = await serverGameService.getGames();
+      const game = allGames.find(g => g.id === gameId);
       if (!game) {
         console.log('Game not found for monitoring:', gameId);
         return;
@@ -645,13 +622,11 @@ export const useGameManager = () => {
         console.log(`Detected BNB in game wallet, updating game state...`);
         
         // Update game with the wallet balance
-        const updatedGame = simpleGameService.updatePoolAmount(gameId, currentBalance, walletInfo.address);
+        await serverGameService.updatePoolAmount(gameId, currentBalance);
         
-        if (updatedGame) {
-          console.log(`Game ${gameId} updated with ${currentBalance} BNB from wallet`);
-          // Trigger a refresh of the games list
-          setGames(prev => [...prev]);
-        }
+        console.log(`Game ${gameId} updated with ${currentBalance} BNB from wallet`);
+        // Trigger a refresh of the games list
+        setGames(prev => [...prev]);
       }
     } catch (error) {
       console.error('Error monitoring game wallet:', error);
@@ -715,7 +690,7 @@ export const useGameManager = () => {
       const txHashes = await refundAllPlayers(gameId, game.players);
       
       // Update game status on server
-      simpleGameService.updateGameStatus(gameId, 'finished');
+      await serverGameService.updateGameStatus(gameId, 'finished');
       
       console.log(`Game ${gameId} ended with refunds:`, txHashes);
       return { success: true, txHashes };
@@ -728,7 +703,6 @@ export const useGameManager = () => {
   // Leave current game
   const leaveCurrentGame = useCallback(() => {
     setCurrentGame(null);
-    saveCurrentGame(null); // Clear from localStorage
     setStakingStatus(prev => ({ ...prev, isStaked: false, isStaking: false, isUnstaking: false, error: undefined, success: undefined }));
     console.log('Left current game');
   }, []);
