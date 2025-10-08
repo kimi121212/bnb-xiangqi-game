@@ -90,14 +90,15 @@ class ServerGameService {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
       const updatedGame = await response.json();
       return updatedGame;
     } catch (error) {
       console.error('Error joining game:', error);
-      return null;
+      throw error; // Re-throw to let the caller handle it
     }
   }
 
