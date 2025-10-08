@@ -12,7 +12,6 @@ import GameHeader from './GameHeader';
 import GameStaking from './GameStaking';
 import SpectatorMode from './SpectatorMode';
 import GameDebug from './GameDebug';
-import TransactionInfo from './TransactionInfo';
 
 // Import hooks
 import { useWallet } from '../hooks/useWallet';
@@ -335,20 +334,6 @@ const App: React.FC = () => {
                   />
                 </GameInfoCard>
                 
-                <GameInfoCard>
-                  <GameInfoTitle>Pool Status</GameInfoTitle>
-                  <TransactionInfo
-                    gameId={selectedGame?.id || ''}
-                    poolAddress={selectedGame?.poolWalletAddress || ''}
-                    totalStaked={poolAmount}
-                    playerStakes={selectedGame?.playerStakes || {}}
-                    stakeAmount={stakeAmount}
-                    maxPlayers={selectedGame?.maxPlayers || 2}
-                    currentPlayers={selectedGame?.players?.length || 0}
-                    stakeCount={selectedGame?.stakeCount || 0}
-                    isActive={selectedGame?.status === 'active'}
-                  />
-                </GameInfoCard>
                 
               </GameInfoSection>
             </GameContainer>

@@ -50,7 +50,19 @@ export const useGameManager = () => {
     error: poolError
   } = useBNBPools();
   const [games, setGames] = useState<GameData[]>([]);
-  const [currentGame, setCurrentGame] = useState<GameData | null>(null);
+  const [currentGame, setCurrentGame] = useState<GameData | null>(() => {
+    // Restore current game from localStorage on page load
+    if (typeof window !== 'undefined') {
+      try {
+        const savedGame = localStorage.getItem('bnb-xiangqi-current-game');
+        return savedGame ? JSON.parse(savedGame) : null;
+      } catch (error) {
+        console.error('Error loading current game from localStorage:', error);
+        return null;
+      }
+    }
+    return null;
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [stakingStatus, setStakingStatus] = useState<{
     isStaked: boolean;
@@ -63,6 +75,21 @@ export const useGameManager = () => {
     isStaking: false,
     isUnstaking: false
   });
+
+  // Save current game to localStorage
+  const saveCurrentGame = useCallback((game: GameData | null) => {
+    if (typeof window !== 'undefined') {
+      try {
+        if (game) {
+          localStorage.setItem('bnb-xiangqi-current-game', JSON.stringify(game));
+        } else {
+          localStorage.removeItem('bnb-xiangqi-current-game');
+        }
+      } catch (error) {
+        console.error('Error saving current game to localStorage:', error);
+      }
+    }
+  }, []);
 
   // Check if current player has staked in the current game
   const checkPlayerStaked = useCallback(async (gameId: string) => {
@@ -217,6 +244,7 @@ export const useGameManager = () => {
       });
       
       setCurrentGame(createdGame);
+      saveCurrentGame(createdGame); // Save to localStorage
       // Reset staking status for new game
       setStakingStatus(prev => ({ ...prev, isStaked: false, isStaking: false, isUnstaking: false, error: undefined, success: undefined }));
       console.log('Game created:', createdGame.id);
@@ -256,6 +284,7 @@ export const useGameManager = () => {
           updatedGame.gameInstance = new XiangqiGame();
         }
         setCurrentGame(updatedGame);
+        saveCurrentGame(updatedGame); // Save to localStorage
         console.log('Successfully rejoined game:', updatedGame.id);
         return updatedGame;
       }
@@ -276,6 +305,7 @@ export const useGameManager = () => {
       // Join game using simple service
       const updatedGame = simpleGameService.joinGame(gameId, walletInfo.address);
       setCurrentGame(updatedGame);
+      saveCurrentGame(updatedGame); // Save to localStorage
       console.log('Successfully joined game:', updatedGame.id);
       return updatedGame;
     } catch (error) {
@@ -475,13 +505,15 @@ export const useGameManager = () => {
 
       // Also update current game immediately if it's the same game
       if (currentGame && currentGame.id === gameId) {
-        setCurrentGame(prev => prev ? {
-          ...prev,
+        const updatedCurrentGame = {
+          ...currentGame,
           poolAmount: newPoolAmount,
           stakeCount: newStakeCount,
           players: newPlayers,
           status: newStakeCount >= 2 ? 'active' : 'waiting'
-        } : prev);
+        };
+        setCurrentGame(updatedCurrentGame);
+        saveCurrentGame(updatedCurrentGame); // Save to localStorage
       }
 
       // Start background verification of the transaction
@@ -695,6 +727,14 @@ export const useGameManager = () => {
     }
   }, [walletInfo, refundAllPlayers]);
 
+  // Leave current game
+  const leaveCurrentGame = useCallback(() => {
+    setCurrentGame(null);
+    saveCurrentGame(null); // Clear from localStorage
+    setStakingStatus(prev => ({ ...prev, isStaked: false, isStaking: false, isUnstaking: false, error: undefined, success: undefined }));
+    console.log('Left current game');
+  }, []);
+
   return {
     games,
     currentGame,
@@ -717,6 +757,7 @@ export const useGameManager = () => {
     canWatchGame,
     isUserInGame,
     sendWinningsToWinner,
-    getGameWalletBalance
+    getGameWalletBalance,
+    leaveCurrentGame
   };
 };
