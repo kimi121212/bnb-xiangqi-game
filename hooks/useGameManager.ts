@@ -149,6 +149,33 @@ export const useGameManager = () => {
     };
   }, [walletInfo.isConnected, walletInfo.address]);
 
+  // Periodic refresh of games to ensure synchronization
+  useEffect(() => {
+    const refreshInterval = setInterval(async () => {
+      try {
+        const serverGames = await serverGameService.getGames();
+        if (serverGames.length > 0) {
+          // Ensure all games have gameInstance
+          const gamesWithInstances = await Promise.all(
+            serverGames.map(async (game) => {
+              if (!game.gameInstance) {
+                const { XiangqiGame } = await import('../utils/xiangqiLogic');
+                game.gameInstance = new XiangqiGame();
+              }
+              return game;
+            })
+          );
+          setGames(gamesWithInstances);
+          console.log('Games refreshed from server:', gamesWithInstances.length);
+        }
+      } catch (error) {
+        console.error('Error refreshing games:', error);
+      }
+    }, 10000); // Refresh every 10 seconds
+
+    return () => clearInterval(refreshInterval);
+  }, []);
+
   // Update staking status when current game changes - SIMPLIFIED APPROACH
   useEffect(() => {
     const updateStakingStatus = () => {
@@ -462,10 +489,26 @@ export const useGameManager = () => {
     try {
       console.log(`Staking ${amount} BNB for game ${gameId}`);
       
-      // Get current game state
-      const game = games.find(g => g.id === gameId);
+      // Get current game state - try local first, then fetch from server
+      let game = games.find(g => g.id === gameId);
       if (!game) {
-        throw new Error('Game not found');
+        console.log('Game not found locally, fetching from server...');
+        try {
+          const serverGames = await serverGameService.getGames();
+          game = serverGames.find(g => g.id === gameId);
+          if (!game) {
+            throw new Error('Game not found on server');
+          }
+          // Add gameInstance if missing
+          if (!game.gameInstance) {
+            const { XiangqiGame } = await import('../utils/xiangqiLogic');
+            game.gameInstance = new XiangqiGame();
+          }
+          console.log('Game found on server:', game);
+        } catch (error) {
+          console.error('Error fetching game from server:', error);
+          throw new Error('Game not found');
+        }
       }
 
       // For multi-browser support, allow same wallet to stake multiple times
