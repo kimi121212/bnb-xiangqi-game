@@ -154,3 +154,6 @@ class ServerGameService {
 }
 
 export default ServerGameService;
+
+// Export a singleton instance
+export const serverGameService = new ServerGameService();
