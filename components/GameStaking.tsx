@@ -281,8 +281,9 @@ const GameStaking: React.FC<GameStakingProps> = ({
       <GameWalletInfo 
         gameId={gameId} 
         onCheckWallet={() => {
-          // This will trigger the wallet monitoring
-          console.log('Manual wallet check triggered');
+          // This will trigger a real balance fetch from BSC
+          console.log('Manual wallet check triggered - fetching live balance from BSC');
+          // The GameWalletInfo component will handle the actual balance fetch
         }}
       />
 

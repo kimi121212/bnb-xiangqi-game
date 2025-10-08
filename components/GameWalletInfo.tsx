@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { colors, spacing, borderRadius, shadows } from '../styles/theme';
 import { clientWalletManager } from '../utils/ClientWalletManager';
+import { useWallet } from '../hooks/useWallet';
 
 const WalletContainer = styled.div`
   background: ${colors.background};
@@ -70,6 +71,7 @@ interface GameWalletInfoProps {
 }
 
 export const GameWalletInfo: React.FC<GameWalletInfoProps> = ({ gameId, onBalanceUpdate, onCheckWallet }) => {
+  const { walletInfo: userWallet } = useWallet();
   const [walletInfo, setWalletInfo] = useState<{
     address: string;
     balance: number;
@@ -81,6 +83,13 @@ export const GameWalletInfo: React.FC<GameWalletInfoProps> = ({ gameId, onBalanc
   useEffect(() => {
     fetchWalletInfo();
   }, [gameId]);
+
+  // Refetch balance when user wallet provider changes
+  useEffect(() => {
+    if (userWallet.provider) {
+      fetchWalletInfo();
+    }
+  }, [userWallet.provider]);
 
   const fetchWalletInfo = async () => {
     try {
@@ -97,14 +106,26 @@ export const GameWalletInfo: React.FC<GameWalletInfoProps> = ({ gameId, onBalanc
       
       console.log('Wallet info:', wallet);
       
+      // Fetch real balance from BSC blockchain
+      let realBalance = 0;
+      if (userWallet.provider) {
+        try {
+          realBalance = await clientWalletManager.getWalletBalance(gameId, userWallet.provider);
+          console.log(`Real BSC balance for ${wallet.address}: ${realBalance} BNB`);
+        } catch (balanceError) {
+          console.warn('Could not fetch balance from BSC:', balanceError);
+          realBalance = 0;
+        }
+      }
+      
       setWalletInfo({
         address: wallet.address,
-        balance: 0, // This would be fetched from blockchain
+        balance: realBalance,
         createdAt: wallet.createdAt
       });
 
       if (onBalanceUpdate) {
-        onBalanceUpdate(0);
+        onBalanceUpdate(realBalance);
       }
     } catch (err: any) {
       console.error('Error fetching wallet info:', err);
@@ -179,23 +200,21 @@ export const GameWalletInfo: React.FC<GameWalletInfoProps> = ({ gameId, onBalanc
         <BalanceLabel>Pool Balance</BalanceLabel>
       </BalanceDisplay>
 
-      {onCheckWallet && (
-        <button 
-          onClick={onCheckWallet}
-          style={{
-            marginTop: spacing.sm,
-            padding: `${spacing.sm} ${spacing.md}`,
-            backgroundColor: colors.primary,
-            color: 'white',
-            border: 'none',
-            borderRadius: borderRadius.sm,
-            cursor: 'pointer',
-            fontSize: '0.9rem'
-          }}
-        >
-          Check Wallet Balance
-        </button>
-      )}
+      <button 
+        onClick={fetchWalletInfo}
+        style={{
+          marginTop: spacing.sm,
+          padding: `${spacing.sm} ${spacing.md}`,
+          backgroundColor: colors.primary,
+          color: 'white',
+          border: 'none',
+          borderRadius: borderRadius.sm,
+          cursor: 'pointer',
+          fontSize: '0.9rem'
+        }}
+      >
+        {loading ? 'Checking...' : 'Check Wallet Balance'}
+      </button>
     </WalletContainer>
   );
 };
