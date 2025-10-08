@@ -68,6 +68,7 @@ const createGame = (gameData) => {
   games.push(newGame);
   saveGames(games);
   console.log(`Created new game: ${newGame.id}`);
+  console.log(`Total games in storage: ${games.length}`);
   return newGame;
 };
 
@@ -141,6 +142,7 @@ export default function handler(req, res) {
   try {
     if (req.method === 'GET') {
       const games = getAllGames();
+      console.log(`API GET: Returning ${games.length} games`);
       return res.status(200).json(games);
     }
 

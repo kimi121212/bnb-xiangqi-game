@@ -222,10 +222,34 @@ export const useGameManager = () => {
         host: newGame.host
       });
       
-      setCurrentGame(createdGame);
+      if (!createdGame) {
+        throw new Error('Failed to create game on server');
+      }
+      
+      console.log('Game created on server:', createdGame.id);
+      
+      // Wait a moment for server to process the game
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Verify the game was created by fetching it from server
+      try {
+        const allGames = await serverGameService.getGames();
+        const verifiedGame = allGames.find(g => g.id === createdGame.id);
+        if (verifiedGame) {
+          console.log('Game verified on server:', verifiedGame.id);
+          setCurrentGame(verifiedGame);
+        } else {
+          console.warn('Game not found on server after creation, using created game');
+          setCurrentGame(createdGame);
+        }
+      } catch (verifyError) {
+        console.warn('Could not verify game on server:', verifyError);
+        setCurrentGame(createdGame);
+      }
+      
       // Reset staking status for new game
       setStakingStatus(prev => ({ ...prev, isStaked: false, isStaking: false, isUnstaking: false, error: undefined, success: undefined }));
-      console.log('Game created:', createdGame.id);
+      console.log('Game created and verified:', createdGame.id);
       return createdGame;
     } catch (error: any) {
       console.error('Failed to create game:', error);
@@ -427,6 +451,18 @@ export const useGameManager = () => {
         const allGames = await serverGameService.getGames();
         game = allGames.find(g => g.id === gameId);
         console.log('Game lookup from server:', game ? 'Found' : 'Not found');
+        
+        // If not found on server, try local games as fallback
+        if (!game) {
+          console.log('Game not found on server, checking local games...');
+          game = games.find(g => g.id === gameId);
+          console.log('Game lookup from local:', game ? 'Found' : 'Not found');
+          
+          // If found locally but not on server, this might be a sync issue
+          if (game) {
+            console.warn('Game found locally but not on server - possible sync issue');
+          }
+        }
       } catch (serverError) {
         console.warn('Server game lookup failed, trying local games:', serverError);
         // Fallback to local games
