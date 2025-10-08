@@ -27,23 +27,61 @@ export const useSimpleStaking = () => {
     try {
       console.log(`💰 Staking ${amount} BNB for game ${gameId}`);
       
-      // Create a simple game wallet address (deterministic based on gameId)
-      const gameWalletAddress = `0x${gameId.replace(/-/g, '').substring(0, 40)}`;
+      // Create a proper game wallet address (deterministic based on gameId)
+      let gameWalletAddress;
+      try {
+        // Use a more robust method to generate a valid Ethereum address
+        const gameIdHash = ethers.keccak256(ethers.toUtf8Bytes(gameId));
+        gameWalletAddress = `0x${gameIdHash.slice(2, 42)}`;
+        
+        // Validate the address format
+        if (!ethers.isAddress(gameWalletAddress)) {
+          throw new Error('Invalid address format');
+        }
+      } catch (error) {
+        console.warn('Keccak256 method failed, using fallback:', error);
+        // Fallback: create a simple deterministic address
+        const cleanGameId = gameId.replace(/[^a-zA-Z0-9]/g, '');
+        const paddedId = cleanGameId.padEnd(40, '0').substring(0, 40);
+        gameWalletAddress = `0x${paddedId}`;
+        
+        if (!ethers.isAddress(gameWalletAddress)) {
+          throw new Error('Failed to generate valid game wallet address');
+        }
+      }
+      
       console.log(`🎯 Sending to game wallet: ${gameWalletAddress}`);
 
       // Convert BNB to wei
       const amountWei = ethers.parseEther(amount.toString());
       
-      // Get gas price
+      // Get gas price with better error handling
       let gasPrice;
       try {
-        const feeData = await signer.provider?.getFeeData();
+        if (!signer.provider) {
+          throw new Error('No provider available');
+        }
+        const feeData = await signer.provider.getFeeData();
         gasPrice = feeData?.gasPrice || ethers.parseUnits('5', 'gwei');
+        console.log(`⛽ Gas price: ${ethers.formatUnits(gasPrice, 'gwei')} gwei`);
       } catch (error) {
-        console.warn('Using fallback gas price');
+        console.warn('Using fallback gas price:', error);
         gasPrice = ethers.parseUnits('5', 'gwei');
       }
 
+      // Validate amount
+      if (amount <= 0) {
+        throw new Error('Stake amount must be greater than 0');
+      }
+
+      // Check user balance
+      const userBalance = await signer.provider?.getBalance(walletInfo.address);
+      if (userBalance && userBalance < amountWei) {
+        throw new Error('Insufficient BNB balance');
+      }
+
+      console.log(`📝 Sending ${amount} BNB to ${gameWalletAddress}`);
+      
       // Send BNB transaction
       const tx = await signer.sendTransaction({
         to: gameWalletAddress,
@@ -80,10 +118,19 @@ export const useSimpleStaking = () => {
     if (!walletInfo.isConnected || !gameId) return false;
     
     try {
-      // Simple check - if user has any BNB transactions to the game wallet
-      const gameWalletAddress = `0x${gameId.replace(/-/g, '').substring(0, 40)}`;
+      // Generate the same game wallet address as in stakeBNB
+      let gameWalletAddress;
+      try {
+        const gameIdHash = ethers.keccak256(ethers.toUtf8Bytes(gameId));
+        gameWalletAddress = `0x${gameIdHash.slice(2, 42)}`;
+      } catch (error) {
+        const cleanGameId = gameId.replace(/[^a-zA-Z0-9]/g, '');
+        const paddedId = cleanGameId.padEnd(40, '0').substring(0, 40);
+        gameWalletAddress = `0x${paddedId}`;
+      }
       
       // For now, just return false - we'll implement proper checking later
+      // This would require checking transaction history
       return false;
     } catch (error) {
       console.error('Error checking stake:', error);
